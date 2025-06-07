@@ -19,7 +19,7 @@ El objetivo de este proyecto es automatizar la carga de los estados de cuenta a 
 ---
 
 # Diagrama del funcionamiento
-Este es una representación en Diagrama del funcionamiento completo del sistema
+Este es una representación en Diagrama del funcionamiento completo del sistema (Dar click para ver mejor).
 
 ![Diagrama-EDC-Loader-V1](media/Diagrama-V1.png)
 

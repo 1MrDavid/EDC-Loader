@@ -23,7 +23,6 @@ Este es una representación en Diagrama del funcionamiento completo del sistema
 
 ![Diagrama-EDC-Loader-V1](media/Diagrama-V1.png)
 
-Aunque, realizando este diagrama me di cuenta que terminé haciendo un monolito, así que voy a estar realizando cambios para que sea más modular y seguir la filosofía de microservicios
 
 ---
 

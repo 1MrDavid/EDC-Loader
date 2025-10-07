@@ -143,12 +143,18 @@ def ejecutar_loader():
     result = subprocess.run(["python", "./python-loader.py"])
     logging.info(f"Carga finalizada con código: {result.returncode}")
 
+def carga_dolar():
+    logging.info("Ejecutando carga de dolares...")
+    result = subprocess.run(["python", "./scripts/dolar-bcv-db.py"])
+    logging.info(f"Carga finalizada con código: {result.returncode}")
+
 #=================================================#
 # main                                            #
 #=================================================#
 
 def main():
     logging.info("Iniciando checker...")
+    carga_dolar()
     while True:
         if db_disponible():
             carga_precio_dolar()

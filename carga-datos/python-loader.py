@@ -3,6 +3,8 @@ import psycopg2
 import logging
 from decimal import Decimal
 from datetime import datetime
+from datetime import date
+import sys
 
 #=================================================#
 # Configuracion del log                           #
@@ -12,7 +14,6 @@ logging.basicConfig(
     level=logging.INFO, 
     format="%(asctime)s [%(levelname)s] %(message)s"
 )
-
 
 #=================================================#
 # Funciones                                       #
@@ -61,24 +62,17 @@ def consultaDolar(fecha, cursor):
 
     return precio_dolar
 
-# Procesa el EDC
-def procesar_archivo(ruta_archivo, cursor):
-    hoy = datetime.now()
-    diaAdd = hoy.day
-    mesAdd = hoy.month
-    anoAdd = hoy.year
-    ahora = datetime.now()
-    horaAdd = ahora.time()
+def procesar_archivo(ruta_archivo, cuenta_id, cursor):
+    fechaAdd = date.today()
 
-    logging.info(f"Procesando archivo: {ruta_archivo}")
     with open(ruta_archivo, "r", encoding="utf-8") as archivo:
-        next(archivo)  # saltar encabezado
-        for linea in archivo:
-            campos = linea.strip().split(";")
-            if len(campos) < 7:
-                continue  # evitar errores si línea incompleta
+        next(archivo)
 
-            # Carga valores del EDC
+        for linea in archivo:
+            campos = linea.strip().split("|")
+            if len(campos) < 7:
+                continue
+
             FechaValor = convertir_fecha(campos[0])
             FechaEfec = convertir_fecha(campos[1])
             Referencia = campos[2].strip()
@@ -87,39 +81,134 @@ def procesar_archivo(ruta_archivo, cursor):
             Ingreso = convertir_valor(campos[5])
             Saldo = convertir_valor(campos[6])
 
+            # Consulta tasa dólar según fecha valor
             if FechaValor:
-                # Toma la fecha valor para realizar la consulta de la tasa del dolar
-                fecha = FechaValor.strftime("%Y%m%d")
-
-                # Toma la tasa del dolar correspondiente a la fecha valor
-                tasaDolar = consultaDolar(fecha, cursor)
+                fecha_dolar = FechaValor.strftime("%Y%m%d")
+                tasaDolar = consultaDolar(fecha_dolar, cursor)
             else:
                 tasaDolar = None
 
-            # Realiza las respectivas conversiones
-            ingresoDolar = (Decimal(Ingreso) / tasaDolar) if Ingreso > 0 and tasaDolar else None
-            egresoDolar = (Decimal(Egreso) / tasaDolar) if Egreso > 0 and tasaDolar else None
-            saldoDolar = (Decimal(Saldo) / tasaDolar) if tasaDolar else None
+            # Conversiones
+            ingresoDolar = (Decimal(Ingreso) / tasaDolar) if Ingreso and tasaDolar else None
+            egresoDolar = (Decimal(Egreso) / tasaDolar) if Egreso and tasaDolar else None
+            saldoDolar = (Decimal(Saldo) / tasaDolar) if Saldo and tasaDolar else None
 
-            # Agrega a la base de datos
+            if tasaDolar is None:
+                tasaDolar = 0.0
+
             cursor.execute("""
-                INSERT INTO finanzas (
-                    diaadd, mesadd, anoadd, horaadd,
-                    fechavalor, fechaefec, referencia,
-                    descripcion, egreso, ingreso, saldo,
-                    ingresoDolar, egresoDolar, saldoDolar,
-                    tasaDolar
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO movimientos (
+                    cuenta_id,
+                    fechaadd,
+                    fechavalor,
+                    fechaefec,
+                    referencia,
+                    descripcion,
+                    egreso,
+                    ingreso,
+                    saldo,
+                    ingresodolar,
+                    egresodolar,
+                    saldodolar,
+                    tasadolar
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
-                diaAdd, mesAdd, anoAdd, horaAdd,
-                FechaValor, FechaEfec, Referencia,
-                Descripcion, Egreso, Ingreso, Saldo,
-                ingresoDolar, egresoDolar, saldoDolar,
+                cuenta_id,
+                fechaAdd,
+                FechaValor,
+                FechaEfec,
+                Referencia,
+                Descripcion,
+                Egreso,
+                Ingreso,
+                Saldo,
+                ingresoDolar,
+                egresoDolar,
+                saldoDolar,
                 tasaDolar
             ))
 
-        conn.commit()
-        logging.info(f"Archivo {ruta_archivo} cargado correctamente.")             
+        logging.info(f"Archivo {ruta_archivo} cargado correctamente.")         
+
+# Calculo de estadisticas
+def recalcular_balance_mensual(cursor, cuenta_id):
+    cursor.execute("""
+    WITH movimientos_mes AS (
+        SELECT
+            m.id,
+            m.cuenta_id,
+            date_trunc('month', m.fechavalor)::date AS periodo,
+            m.fechavalor,
+            m.saldo,
+            m.ingreso,
+            m.egreso
+        FROM movimientos m
+        WHERE m.cuenta_id = %s
+    ),
+    primer_movimiento AS (
+        SELECT DISTINCT ON (cuenta_id, periodo)
+            cuenta_id,
+            periodo,
+            saldo AS monto_inicio
+        FROM movimientos_mes
+        ORDER BY cuenta_id, periodo, id ASC
+    ),
+    ultimo_movimiento AS (
+        SELECT DISTINCT ON (cuenta_id, periodo)
+            cuenta_id,
+            periodo,
+            saldo AS monto_final
+        FROM movimientos_mes
+        ORDER BY cuenta_id, periodo, id DESC
+    )
+    INSERT INTO balance_mensual (
+        cuenta_id,
+        periodo,
+        monto_inicio,
+        monto_final,
+        ingresos_total,
+        egresos_total,
+        numero_ingresos,
+        numero_egresos,
+        saldo_variacion,
+        flujo_neto,
+        promedio_ingreso,
+        promedio_egreso
+    )
+    SELECT
+        pm.cuenta_id,
+        pm.periodo,
+        pm.monto_inicio,
+        um.monto_final,
+        SUM(mm.ingreso) AS ingresos_total,
+        SUM(mm.egreso) AS egresos_total,
+        COUNT(*) FILTER (WHERE mm.ingreso > 0) AS numero_ingresos,
+        COUNT(*) FILTER (WHERE mm.egreso > 0) AS numero_egresos,
+        (um.monto_final - pm.monto_inicio) AS saldo_variacion,
+        (SUM(mm.ingreso) - SUM(mm.egreso)) AS flujo_neto,
+        AVG(mm.ingreso) FILTER (WHERE mm.ingreso > 0) AS promedio_ingreso,
+        AVG(mm.egreso) FILTER (WHERE mm.egreso > 0) AS promedio_egreso
+    FROM primer_movimiento pm
+    JOIN ultimo_movimiento um 
+        ON pm.cuenta_id = um.cuenta_id 
+        AND pm.periodo = um.periodo
+    JOIN movimientos_mes mm 
+        ON mm.cuenta_id = pm.cuenta_id 
+        AND mm.periodo = pm.periodo
+    GROUP BY pm.cuenta_id, pm.periodo, pm.monto_inicio, um.monto_final
+    ON CONFLICT (cuenta_id, periodo)
+    DO UPDATE SET
+        monto_inicio = EXCLUDED.monto_inicio,
+        monto_final = EXCLUDED.monto_final,
+        ingresos_total = EXCLUDED.ingresos_total,
+        egresos_total = EXCLUDED.egresos_total,
+        numero_ingresos = EXCLUDED.numero_ingresos,
+        numero_egresos = EXCLUDED.numero_egresos,
+        saldo_variacion = EXCLUDED.saldo_variacion,
+        flujo_neto = EXCLUDED.flujo_neto,
+        promedio_ingreso = EXCLUDED.promedio_ingreso,
+        promedio_egreso = EXCLUDED.promedio_egreso;
+    """, (cuenta_id,))
 
 #=================================================#
 # Definiciones iniciales                          #
@@ -138,27 +227,27 @@ conn = psycopg2.connect(
 # main                                            #
 #=================================================#
 
+
 def main():
+    if len(sys.argv) != 3:
+        logging.error("Uso: python python-loader.py <archivo> <cuenta_id>")
+        sys.exit(1)
+
+    ruta_archivo = sys.argv[1]
+    cuenta_id = int(sys.argv[2])
+
     cursor = conn.cursor()
 
-    carpeta = "./estados-cuenta"
-    if not os.path.exists(carpeta):
-        logging.error(f"La carpeta {carpeta} no existe.")
-        return
+    if archivo_ya_cargado(cursor, os.path.basename(ruta_archivo)):
+        logging.error("Archivo ya cargado previamente")
+        sys.exit(2)
 
-    for archivo_nombre in os.listdir(carpeta):
-        if not archivo_nombre.endswith(".txt"):
-            continue
-
-        if archivo_ya_cargado(cursor, archivo_nombre):
-            logging.error(f"Archivo ya cargado previamente: {archivo_nombre}")
-            continue
-
-        ruta_completa = os.path.join(carpeta, archivo_nombre)
-        procesar_archivo(ruta_completa, cursor)
-
-        registrar_archivo_cargado(cursor, archivo_nombre)
-        conn.commit()  # importante confirmar la inserción en archivos_cargados
+    procesar_archivo(ruta_archivo, cuenta_id, cursor)
+    conn.commit()
+    recalcular_balance_mensual(cursor, cuenta_id)
+    conn.commit()
+    registrar_archivo_cargado(cursor, os.path.basename(ruta_archivo))
+    conn.commit()
 
     cursor.close()
     conn.close()

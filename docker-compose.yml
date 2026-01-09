@@ -13,47 +13,47 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d
       
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: pgadmin_container
-    restart: always
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - "5050:80"
-    depends_on:
-      - db
+  # pgadmin:
+  #   image: dpage/pgadmin4
+  #   container_name: pgadmin_container
+  #   restart: always
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: admin@admin.com
+  #     PGADMIN_DEFAULT_PASSWORD: admin
+  #   ports:
+  #     - "5050:80"
+  #   depends_on:
+  #     - db
 
-  python-checker:
-    build: ./carga-datos
-    command: ["python", "-u", "python-checker.py"]
-    depends_on:
-      - db
-    environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: finanzas
-      DB_USER: root
-      DB_PASSWORD: 1234
-    volumes:
-      - ./carga-datos:/app  # 🔁 monta todo el código como volumen
-      - ./estados-cuenta:/app/estados-cuenta
-    restart: always
+  # python-checker:
+  #   build: ./carga-datos
+  #   command: ["python", "-u", "python-checker.py"]
+  #   depends_on:
+  #     - db
+  #   environment:
+  #     DB_HOST: db
+  #     DB_PORT: 5432
+  #     DB_NAME: finanzas
+  #     DB_USER: root
+  #     DB_PASSWORD: 1234
+  #   volumes:
+  #     - ./carga-datos:/app  # 🔁 monta todo el código como volumen
+  #     - ./estados-cuenta:/app/estados-cuenta
+  #   restart: always
 
-  spring-api:
-    build:
-      context: ./api
-    container_name: edc-loader-api
-    depends_on:
-      - db
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/finanzas
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: 1234
-    ports:
-      - "8081:8080"  
-    restart: always
+  # spring-api:
+  #   build:
+  #     context: ./api
+  #   container_name: edc-loader-api
+  #   depends_on:
+  #     - db
+  #   environment:
+  #     SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/finanzas
+  #     SPRING_DATASOURCE_USERNAME: root
+  #     SPRING_DATASOURCE_PASSWORD: 1234
+  #   ports:
+  #     - "8081:8080"  
+  #   restart: always
 
 volumes:
   postgres_data:

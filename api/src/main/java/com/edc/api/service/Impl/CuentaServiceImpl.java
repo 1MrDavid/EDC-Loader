@@ -1,8 +1,9 @@
-package com.edc.api.service;
+package com.edc.api.service.Impl;
 
 import com.edc.api.dto.CuentaDTO;
 import com.edc.api.mapper.CuentaMapper;
 import com.edc.api.repository.CuentaRepository;
+import com.edc.api.service.CuentaService;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 

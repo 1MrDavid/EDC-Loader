@@ -1,6 +1,6 @@
 ﻿Día,BCV,Mes
 1,Feriado,Enero
-2,52.03[284]​,Enero
+2,52.03,Enero
 3,Bs. 52.57,Enero
 4,sábado,Enero
 5,domingo,Enero
@@ -12,7 +12,7 @@
 11,sábado,Enero
 12,domingo,Enero
 13,Bs. 53.85,Enero
-14,Bs. 53.88 [287]​,Enero
+14,Bs. 53.88,Enero
 15,Bs. 53.96,Enero
 16,Bs. 54.36,Enero
 17,Bs. 54.76,Enero
@@ -32,7 +32,7 @@
 31,Bs. 57.96,Enero
 1,sábado,Febrero
 2,domingo,Febrero
-3,58.44[285]​,Febrero
+3,58.44,Febrero
 4,Bs. 58.54,Febrero
 5,Bs. 58.79,Febrero
 6,Bs. 59.46,Febrero
@@ -88,7 +88,7 @@
 28,Bs. 69.43,Marzo
 29,sábado,Marzo
 30,domingo,Marzo
-31,Bs. 69.56[289]​,Marzo
+31,Bs. 69.56,Marzo
 1,Bs. 69.78,Abril
 2,Bs. 70.01,Abril
 3,Bs. 70.25,Abril
@@ -148,7 +148,7 @@
 27,Bs. 95.23,Mayo
 28,Bs. 95.81,Mayo
 29,Bs. 96.53,Mayo
-30,Bs. 96.85[290]​,Mayo
+30,Bs. 96.85,Mayo
 31,sábado,Mayo
 1,domingo,Junio
 2,feriado,Junio
@@ -278,3 +278,89 @@
 4,sábado,Octubre
 5,domingo,Octubre
 6,Bs. 185.39,Octubre
+7,Bs. 187.28,Octubre
+8,Bs. 189.25,Octubre
+9,Bs. 191.36,Octubre
+10,Bs. 193.29,Octubre
+11,sábado,Octubre
+12,domingo,Octubre
+13,Bs. 195.24,Octubre
+14,Bs. 197.24,Octubre
+15,Bs. 199.10,Octubre
+16,Bs. 201.46,Octubre
+17,Bs. 203.74,Octubre
+18,sábado,Octubre
+19,domingo,Octubre
+20,Bs. 205.67,Octubre
+21,feriado,Octubre
+22,Bs. 210.28,Octubre
+23,Bs. 212.48,Octubre
+24,Bs. 214.41,Octubre
+25,sábado,Octubre
+26,domingo,Octubre
+27,Bs. 216.37,Octubre
+28,Bs. 218.17,Octubre
+29,Bs. 219.87,Octubre
+30,Bs. 221.74,Octubre
+31,Bs. 223.64,Octubre
+1,sábado,Noviembre
+2,domingo,Noviembre
+3,Bs. 223.96,Noviembre
+4,Bs. 224.37,Noviembre
+5,Bs. 226.13,Noviembre
+6,Bs. 227.55,Noviembre
+7,Bs. 228.47,Noviembre
+8,sábado,Noviembre
+9,domingo,Noviembre
+10,Bs. 231.04,Noviembre
+11,Bs. 231.09,Noviembre
+12,Bs. 233.04,Noviembre
+13,Bs. 233.55,Noviembre
+14,Bs. 234.87,Noviembre
+15,sábado,Noviembre
+16,domingo,Noviembre
+17,Bs. 236.46,Noviembre
+18,Bs. 236.83,Noviembre
+19,Bs. 237.75,Noviembre
+20,Bs. 240.32,Noviembre
+21,Bs. 241.57,Noviembre
+22,sábado,Noviembre
+23,domingo,Noviembre
+24,Bs. 243.11,Noviembre
+25,Bs. 243.11,Noviembre
+26,Bs. 243.57,Noviembre
+27,Bs. 244.65,Noviembre
+28,Bs. 245.67,Noviembre
+29,sábado,Noviembre
+30,domingo,Noviembre
+1,Bs. 247.30,Diciembre
+2,Bs. 247.40,Diciembre
+3,Bs. 249.19,Diciembre
+4,Bs. 251.88,Diciembre
+5,Bs. 254.87,Diciembre
+6,sábado,Diciembre
+7,domingo,Diciembre
+8,Bs. 257.92,Diciembre
+9,Bs. 257.92,Diciembre
+10,Bs. 262.10,Diciembre
+11,Bs. 265.06,Diciembre
+12,Bs. 267.64,Diciembre
+13,sábado,Diciembre
+14,domingo,Diciembre
+15,Bs. 270.78,Diciembre
+16,Bs. 273.58,Diciembre
+17,Bs. 276.57,Diciembre
+18,Bs. 279.56,Diciembre
+19,Bs. 282.51,Diciembre
+20,sábado,Diciembre
+21,domingo,Diciembre
+22,Bs. 285.40,Diciembre
+23,Bs. 288.44,Diciembre
+24,Bs. 291.35,Diciembre
+25,Navidad,Diciembre
+26,Bs. 291.35,Diciembre
+27,sábado,Diciembre
+28,domingo,Diciembre
+29,Bs. 294.96,Diciembre
+30,Bs. 298.14,Diciembre
+31,Bs. 301.37,Diciembre

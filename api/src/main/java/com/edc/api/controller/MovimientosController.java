@@ -5,6 +5,7 @@ import com.edc.api.model.Movimiento;
 import com.edc.api.repository.MovimientoRepository;
 import com.edc.api.service.MovimientoService;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/movimientos")
 @AllArgsConstructor
+@Slf4j
 public class MovimientosController {
 
     private final MovimientoService movimientoService;
@@ -35,10 +37,23 @@ public class MovimientosController {
                 Sort.Order.desc(sort[0])
         );
 
+        log.info("Consultando movimientos desde {} hasta {}", inicio, fin);
+
         Pageable pageable = PageRequest.of(page, size, sorting);
 
         Page<MovimientoDTO> pagina = movimientoService.obtenerPorPagina(inicio, fin, pageable);
 
         return ResponseEntity.ok(pagina);
+    }
+
+    @GetMapping("/fecha-mas-reciente")
+    public LocalDate obtenerFechaMasReciente(
+            @RequestParam(required = false) Integer cuentaId
+    ) {
+        if (cuentaId != null) {
+            return movimientoService.obtenerFechaValorMasReciente(cuentaId);
+        }
+
+        return movimientoService.obtenerFechaValorMasReciente();
     }
 }

@@ -40,3 +40,23 @@ export interface CargaArchivoResponseDTO {
   estado: "PROCESADO" | "ERROR";
   mensaje: string;
 }
+
+export interface BalanceMensualDTO {
+  cuenta_id: number;
+  periodo: string; // "YYYY-MM-DD"
+  
+  monto_inicio: number;
+  monto_final: number;
+  
+  ingresos_total: number;
+  egresos_total: number;
+  
+  numero_ingresos: number;
+  numero_egresos: number;
+  
+  saldo_variacion: number;
+  flujo_neto: number;
+  
+  promedio_ingreso: number;
+  promedio_egreso: number;
+}

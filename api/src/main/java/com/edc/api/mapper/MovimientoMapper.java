@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 public class MovimientoMapper {
 
     public MovimientoDTO toDto(Movimiento entity) {
-        MovimientoDTO dto = new MovimientoDTO(
+        return new MovimientoDTO(
                 entity.getId(),
                 entity.getCuentaId(),
                 entity.getFechaAdd(),
@@ -25,7 +25,5 @@ public class MovimientoMapper {
                 entity.getTasadolar(),
                 entity.getCategoria()
         );
-
-        return dto;
     }
 }

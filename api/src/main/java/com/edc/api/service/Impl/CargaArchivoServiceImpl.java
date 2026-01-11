@@ -1,4 +1,4 @@
-package com.edc.api.service;
+package com.edc.api.service.Impl;
 
 import com.edc.api.dto.CargaArchivoResponseDTO;
 import com.edc.api.service.CargaArchivoService;
@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -14,7 +13,7 @@ import java.nio.file.Path;
 @RequiredArgsConstructor
 public class CargaArchivoServiceImpl implements CargaArchivoService {
 
-    private static final String PYTHON_SCRIPT = "C:\\Users\\david\\Desktop\\Si\\Repositorios\\EDC-Loader\\carga-datos\\python-loader.py";
+    private static final String PYTHON_SCRIPT = "C:\\Users\\david\\OneDrive\\Escritorio\\Si\\Repositorios\\EDC-Loader\\carga-datos\\python-loader.py";
 
     @Override
     public CargaArchivoResponseDTO cargarEstadoCuenta(

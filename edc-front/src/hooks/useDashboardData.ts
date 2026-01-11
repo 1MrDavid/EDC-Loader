@@ -1,38 +1,81 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { obtenerCuentas, obtenerMovimientos } from "../services/bankingService";
+import { 
+  obtenerCuentas, 
+  obtenerMovimientos, 
+  obtenerBalanceMensual,
+  obtenerFechaMasReciente // <--- Importamos
+} from "../services/bankingService";
+import { type BalanceMensualDTO } from "../types/finance";
 
 export const useDashboardData = () => {
-  // Estados para filtros
+  // Inicializamos con la fecha actual por defecto (fallback)
   const [page, setPage] = useState(0);
-  const [month, setMonth] = useState(new Date().getMonth() + 1); // 1-12
+  const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
 
-  // Query de Cuentas (No cambia con paginación)
+  // 1. Cargar Cuentas
   const cuentasQuery = useQuery({
     queryKey: ["cuentas"],
     queryFn: obtenerCuentas,
   });
 
-  // Query de Movimientos (Depende de page, month, year)
-  const movimientosQuery = useQuery({
-    queryKey: ["movimientos", page, month, year], // Clave compuesta
-    queryFn: () => obtenerMovimientos({ page, month, year }),
-    placeholderData: (prev) => prev, // Mantiene los datos viejos mientras carga los nuevos (mejor UX)
+  // Seleccionar la primera cuenta automáticamente
+  useEffect(() => {
+    if (cuentasQuery.data && cuentasQuery.data.length > 0 && !selectedAccountId) {
+      setSelectedAccountId(cuentasQuery.data[0].id || null);
+    }
+  }, [cuentasQuery.data]);
+
+  // --- NUEVO: Sincronización de Fecha ---
+  // Consultamos la fecha más reciente cada vez que cambia la cuenta seleccionada (o al inicio)
+  const fechaRecienteQuery = useQuery({
+    queryKey: ["fechaReciente", selectedAccountId],
+    queryFn: () => obtenerFechaMasReciente(selectedAccountId || undefined),
+    enabled: true, // Siempre intentamos buscar la fecha reciente general o de la cuenta
   });
 
-  // Calculo de saldos (Nota: idealmente el backend debería dar un endpoint de resumen de saldos aparte)
-  // Pero manteniendo tu lógica actual:
-  const movimientos = movimientosQuery.data?.content || [];
-  const ultimoMov = movimientos[0]; // Como ahora es DESC, el indice 0 es el más reciente
+  // Efecto para actualizar los filtros cuando llega la fecha reciente
+  useEffect(() => {
+    if (fechaRecienteQuery.data) {
+      // La fecha viene como string "2025-10-01"
+      // Usamos split para evitar problemas de zona horaria con new Date()
+      const [y, m, d] = fechaRecienteQuery.data.split('-').map(Number);
+      
+      if (y && m) {
+        setYear(y);
+        setMonth(m);
+        setPage(0); // Reiniciamos paginación
+      }
+    }
+  }, [fechaRecienteQuery.data, selectedAccountId]); 
+  // Al poner selectedAccountId aquí, forzamos que la UI salte a la última fecha
+  // disponible de esa cuenta específica cuando el usuario cambia el dropdown.
+
+  // -------------------------------------
+
+  // 2. Cargar Movimientos (Usando los estados que ahora se auto-actualizan)
+  const movimientosQuery = useQuery({
+    queryKey: ["movimientos", page, month, year, selectedAccountId],
+    queryFn: () => obtenerMovimientos({ page, month, year, /* cuentaId: selectedAccountId */ }), 
+    placeholderData: (prev) => prev,
+  });
+
+  // 3. Cargar Balance
+  const balanceQuery = useQuery({
+    queryKey: ["balance", selectedAccountId, month, year],
+    queryFn: () => selectedAccountId ? obtenerBalanceMensual(selectedAccountId, month, year) : null,
+    enabled: !!selectedAccountId,
+  });
 
   return {
-    isLoading: cuentasQuery.isLoading || movimientosQuery.isLoading,
+    isLoading: cuentasQuery.isLoading || balanceQuery.isLoading || fechaRecienteQuery.isLoading,
     cuentas: cuentasQuery.data || [],
-    movimientosData: movimientosQuery.data, // Objeto completo PageResponse
-    saldoUSD: ultimoMov?.saldodolar || 0,
-    saldoBS: ultimoMov?.saldo || 0,
-    filters: { page, month, year },
-    actions: { setPage, setMonth, setYear }
+    movimientosData: movimientosQuery.data,
+    balanceMensual: balanceQuery.data as BalanceMensualDTO | null,
+    
+    filters: { page, month, year, selectedAccountId },
+    actions: { setPage, setMonth, setYear, setSelectedAccountId }
   };
 };

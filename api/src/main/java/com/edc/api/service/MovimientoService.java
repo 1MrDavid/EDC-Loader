@@ -14,4 +14,8 @@ public interface MovimientoService {
             LocalDate fin,
             Pageable pageable
     );
+
+    LocalDate obtenerFechaValorMasReciente(int cuentaId);
+
+    LocalDate obtenerFechaValorMasReciente();
 }

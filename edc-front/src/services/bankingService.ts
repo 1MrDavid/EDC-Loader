@@ -1,5 +1,5 @@
 import { api } from "./api";
-import { type PageResponse, type CuentaDTO, type MovimientoDTO } from "../types/finance";
+import { type BalanceMensualDTO, type PageResponse, type CuentaDTO, type MovimientoDTO } from "../types/finance";
 
 export const obtenerCuentas = async (): Promise<CuentaDTO[]> => {
   const response = await api.get<CuentaDTO[]>("/cuentas");
@@ -37,4 +37,34 @@ export const obtenerMovimientos = async ({ page = 0, month, year }: MovimientoFi
   });
   
   return response.data;
+};
+
+export const obtenerBalanceMensual = async (cuentaId: number, month: number, year: number): Promise<BalanceMensualDTO | null> => {
+  // Formatear fecha al primer día del mes: YYYY-MM-01
+  const periodo = `${year}-${month.toString().padStart(2, '0')}-01`;
+
+  try {
+    const response = await api.get<BalanceMensualDTO>("/balance-mensual", {
+      params: { cuentaId, periodo }
+    });
+    return response.data;
+  } catch (error) {
+    // Si no hay balance calculado para ese mes, retornamos null o manejamos el error
+    console.warn("No se encontró balance para este periodo");
+    return null;
+  }
+};
+
+export const obtenerFechaMasReciente = async (cuentaId?: number): Promise<string | null> => {
+  try {
+    // Si cuentaId es null/undefined, axios no enviará el param o lo enviará vacío según config
+    // Mejor aseguramos el objeto params:
+    const params = cuentaId ? { cuentaId } : {};
+    
+    const response = await api.get<string>("/movimientos/fecha-mas-reciente", { params });
+    return response.data; // Retorna "2025-10-01"
+  } catch (error) {
+    console.error("No se pudo obtener la fecha reciente", error);
+    return null; 
+  }
 };

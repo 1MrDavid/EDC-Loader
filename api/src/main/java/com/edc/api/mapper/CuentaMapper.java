@@ -8,12 +8,10 @@ import org.springframework.stereotype.Component;
 public class CuentaMapper {
 
     public CuentaDTO toDto(Cuenta entity) {
-        CuentaDTO dto = new CuentaDTO(
+        return new CuentaDTO(
                 entity.getId(),
                 entity.getNumero(),
                 entity.getBanco()
         );
-
-        return dto;
     }
 }

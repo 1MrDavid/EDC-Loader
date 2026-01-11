@@ -4,6 +4,15 @@ interface Props {
   data: MovimientoDTO[];
 }
 
+const formatUSD = (val: number) => {
+  return new Intl.NumberFormat('en-US', { 
+    style: 'currency', 
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2 
+  }).format(val);
+};
+
 export const MovimientosTable = ({ data }: Props) => {
   return (
     <table className="w-full text-left border-collapse">
@@ -29,7 +38,9 @@ export const MovimientosTable = ({ data }: Props) => {
               {m.ingreso ? `+${m.ingreso}` : `-${m.egreso}`}
             </td>
             <td className={`px-6 py-4 text-sm text-right font-medium ${m.ingresodolar ? 'text-emerald-600' : 'text-rose-600'}`}>
-              {m.ingresodolar ? `+$${m.ingresodolar}` : `-$${m.egresodolar}`}
+              {m.ingresodolar 
+              ? `+${formatUSD(m.ingresodolar)}` 
+              : `-${formatUSD(m.egresodolar || 0)}`}
             </td>
             <td className="px-6 py-4 text-sm text-center text-slate-500 font-mono">
               {m.tasadolar?.toFixed(2) ?? "-"}

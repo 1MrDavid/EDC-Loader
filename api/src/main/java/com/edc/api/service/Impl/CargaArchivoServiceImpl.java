@@ -13,7 +13,7 @@ import java.nio.file.Path;
 @RequiredArgsConstructor
 public class CargaArchivoServiceImpl implements CargaArchivoService {
 
-    private static final String PYTHON_SCRIPT = "C:\\Users\\david\\OneDrive\\Escritorio\\Si\\Repositorios\\EDC-Loader\\carga-datos\\python-loader.py";
+    private static final String PYTHON_SCRIPT = "/home/mrdavid/Desktop/Si/Repositorios/EDC-Loader/carga-datos/python-loader.py";
 
     @Override
     public CargaArchivoResponseDTO cargarEstadoCuenta(

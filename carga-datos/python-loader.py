@@ -211,19 +211,6 @@ def recalcular_balance_mensual(cursor, cuenta_id):
     """, (cuenta_id,))
 
 #=================================================#
-# Definiciones iniciales                          #
-#=================================================#
-
-# Realiza conexion a la DB
-conn = psycopg2.connect(
-    host=os.getenv("DB_HOST", "localhost"),
-    port=os.getenv("DB_PORT", "5432"),
-    database=os.getenv("DB_NAME", "finanzas"),
-    user=os.getenv("DB_USER", "root"),
-    password=os.getenv("DB_PASSWORD", "1234")
-)
-
-#=================================================#
 # main                                            #
 #=================================================#
 
@@ -232,6 +219,15 @@ def main():
     if len(sys.argv) != 3:
         logging.error("Uso: python python-loader.py <archivo> <cuenta_id>")
         sys.exit(1)
+
+    # Realiza conexion a la DB
+    conn = psycopg2.connect(
+        host=os.getenv("DB_HOST", "localhost"),
+        port=os.getenv("DB_PORT", "5432"),
+        database=os.getenv("DB_NAME", "finanzas"),
+        user=os.getenv("DB_USER", "root"),
+        password=os.getenv("DB_PASSWORD", "1234")
+    )
 
     ruta_archivo = sys.argv[1]
     cuenta_id = int(sys.argv[2])

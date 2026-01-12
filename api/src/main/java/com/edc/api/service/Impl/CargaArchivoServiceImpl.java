@@ -13,8 +13,6 @@ import java.nio.file.Path;
 @RequiredArgsConstructor
 public class CargaArchivoServiceImpl implements CargaArchivoService {
 
-    private static final String PYTHON_SCRIPT = "/home/mrdavid/Desktop/Si/Repositorios/EDC-Loader/carga-datos/python-loader.py";
-
     @Override
     public CargaArchivoResponseDTO cargarEstadoCuenta(
             MultipartFile archivo,
@@ -22,24 +20,25 @@ public class CargaArchivoServiceImpl implements CargaArchivoService {
     ) {
 
         try {
-            // 1. Guardar archivo temporal
-            Path tempFile = Files.createTempFile("edc-", ".txt");
-            archivo.transferTo(tempFile.toFile());
+            Path uploadDir = Path.of("/app/uploads");
+            Files.createDirectories(uploadDir);
 
-            // 2. Ejecutar Python
+            Path filePath = uploadDir.resolve(archivo.getOriginalFilename());
+            archivo.transferTo(filePath.toFile());
+
             ProcessBuilder pb = new ProcessBuilder(
-                    "python",
-                    PYTHON_SCRIPT,
-                    tempFile.toAbsolutePath().toString(),
+                    "docker", "run", "--rm",
+                    "--network", "edc-loader_default",
+                    "-v", uploadDir.toAbsolutePath() + ":/app/uploads",
+                    "edc-python-loader",
+                    "python", "python-loader.py",
+                    "/app/uploads/" + archivo.getOriginalFilename(),
                     cuentaId.toString()
             );
 
             pb.inheritIO();
             Process process = pb.start();
-
             int exitCode = process.waitFor();
-
-            Files.deleteIfExists(tempFile);
 
             if (exitCode != 0) {
                 return new CargaArchivoResponseDTO(
@@ -67,3 +66,4 @@ public class CargaArchivoServiceImpl implements CargaArchivoService {
         }
     }
 }
+

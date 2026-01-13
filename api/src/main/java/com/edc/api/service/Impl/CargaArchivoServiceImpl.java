@@ -1,51 +1,45 @@
 package com.edc.api.service.Impl;
 
 import com.edc.api.dto.CargaArchivoResponseDTO;
+import com.edc.api.dto.PythonCargaResponseDTO;
 import com.edc.api.service.CargaArchivoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
 
 @Service
 @RequiredArgsConstructor
 public class CargaArchivoServiceImpl implements CargaArchivoService {
+
+    private final WebClient webClient;
+
+    private static final String UPLOAD_DIR = "/app/uploads";
+    private static final String PYTHON_URL = "http://python-loader:5000/procesar";
 
     @Override
     public CargaArchivoResponseDTO cargarEstadoCuenta(
             MultipartFile archivo,
             Long cuentaId
     ) {
-
         try {
-            Path uploadDir = Path.of("/app/uploads");
-            Files.createDirectories(uploadDir);
+            PythonCargaResponseDTO response = webClient.post()
+                    .uri("http://python-loader:5000/procesar")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData("archivo", archivo.getResource())
+                            .with("cuenta_id", cuentaId))
+                    .retrieve()
+                    .bodyToMono(PythonCargaResponseDTO.class)
+                    .block();
 
-            Path filePath = uploadDir.resolve(archivo.getOriginalFilename());
-            archivo.transferTo(filePath.toFile());
-
-            ProcessBuilder pb = new ProcessBuilder(
-                    "docker", "run", "--rm",
-                    "--network", "edc-loader_default",
-                    "-v", uploadDir.toAbsolutePath() + ":/app/uploads",
-                    "edc-python-loader",
-                    "python", "python-loader.py",
-                    "/app/uploads/" + archivo.getOriginalFilename(),
-                    cuentaId.toString()
-            );
-
-            pb.inheritIO();
-            Process process = pb.start();
-            int exitCode = process.waitFor();
-
-            if (exitCode != 0) {
+            if (response == null || !"OK".equalsIgnoreCase(response.estado())) {
                 return new CargaArchivoResponseDTO(
                         archivo.getOriginalFilename(),
                         cuentaId,
                         "ERROR",
-                        "Error procesando el archivo"
+                        "Error procesando archivo"
                 );
             }
 
@@ -53,7 +47,7 @@ public class CargaArchivoServiceImpl implements CargaArchivoService {
                     archivo.getOriginalFilename(),
                     cuentaId,
                     "PROCESADO",
-                    "Archivo cargado correctamente"
+                    response.mensaje()
             );
 
         } catch (Exception e) {
@@ -65,5 +59,5 @@ public class CargaArchivoServiceImpl implements CargaArchivoService {
             );
         }
     }
-}
 
+}

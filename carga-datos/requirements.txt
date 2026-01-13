@@ -1,3 +1,6 @@
-psycopg2-binary
 requests
 pandas
+fastapi
+python-multipart
+uvicorn
+psycopg2-binary

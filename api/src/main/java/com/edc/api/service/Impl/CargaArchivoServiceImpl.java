@@ -16,30 +16,43 @@ public class CargaArchivoServiceImpl implements CargaArchivoService {
 
     private final WebClient webClient;
 
-    private static final String UPLOAD_DIR = "/app/uploads";
-    private static final String PYTHON_URL = "http://python-loader:5000/procesar";
+    private static final String PYTHON_URL = "http://python-loader:5000/api/cargar-estado";
 
     @Override
     public CargaArchivoResponseDTO cargarEstadoCuenta(
             MultipartFile archivo,
-            Long cuentaId
+            Long cuentaId,
+            String banco
     ) {
+
         try {
             PythonCargaResponseDTO response = webClient.post()
-                    .uri("http://python-loader:5000/procesar")
+                    .uri(PYTHON_URL)
                     .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(BodyInserters.fromMultipartData("archivo", archivo.getResource())
-                            .with("cuenta_id", cuentaId))
+                    .body(BodyInserters
+                            .fromMultipartData("file", archivo.getResource())
+                            .with("cuenta_id", cuentaId)
+                            .with("banco", banco)
+                    )
                     .retrieve()
                     .bodyToMono(PythonCargaResponseDTO.class)
                     .block();
 
-            if (response == null || !"OK".equalsIgnoreCase(response.estado())) {
+            if (response == null) {
                 return new CargaArchivoResponseDTO(
                         archivo.getOriginalFilename(),
                         cuentaId,
                         "ERROR",
-                        "Error procesando archivo"
+                        "Respuesta nula del servicio de procesamiento"
+                );
+            }
+
+            if (!"success".equalsIgnoreCase(response.status())) {
+                return new CargaArchivoResponseDTO(
+                        archivo.getOriginalFilename(),
+                        cuentaId,
+                        "ERROR",
+                        response.message()
                 );
             }
 
@@ -47,7 +60,7 @@ public class CargaArchivoServiceImpl implements CargaArchivoService {
                     archivo.getOriginalFilename(),
                     cuentaId,
                     "PROCESADO",
-                    response.mensaje()
+                    response.message()
             );
 
         } catch (Exception e) {
@@ -59,5 +72,5 @@ public class CargaArchivoServiceImpl implements CargaArchivoService {
             );
         }
     }
-
 }
+

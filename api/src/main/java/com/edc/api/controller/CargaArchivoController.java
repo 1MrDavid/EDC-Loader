@@ -17,10 +17,11 @@ public class CargaArchivoController {
     @PostMapping("/estado-cuenta")
     public ResponseEntity<CargaArchivoResponseDTO> cargarEstadoCuenta(
             @RequestParam("archivo") MultipartFile archivo,
-            @RequestParam("cuentaId") Long cuentaId
+            @RequestParam("cuentaId") Long cuentaId,
+            @RequestParam("banco") String banco
     ) {
         return ResponseEntity.ok(
-                cargaArchivoService.cargarEstadoCuenta(archivo, cuentaId)
+                cargaArchivoService.cargarEstadoCuenta(archivo, cuentaId, banco)
         );
     }
 }

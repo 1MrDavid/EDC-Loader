@@ -1,5 +1,6 @@
 package com.edc.api.service.Impl;
 
+import com.edc.api.dto.FlujoDiarioDTO;
 import com.edc.api.dto.MovimientoDTO;
 import com.edc.api.mapper.MovimientoMapper;
 import com.edc.api.repository.MovimientoRepository;
@@ -10,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @AllArgsConstructor
@@ -38,5 +40,10 @@ public class MovimientoServiceImpl implements MovimientoService {
     public LocalDate obtenerFechaValorMasReciente(int cuentaId) {
         LocalDate fecha = repository.findMaxFechaValorByCuenta(cuentaId);
         return fecha != null ? fecha.withDayOfMonth(1) : null;
+    }
+
+    @Override
+    public List<FlujoDiarioDTO> obtenerFlujoDiarioPorMes(LocalDate periodo, int cuentaId) {
+        return repository.findFlujoDiarioByMes(periodo, cuentaId);
     }
 }

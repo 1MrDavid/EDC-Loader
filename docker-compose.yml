@@ -16,8 +16,7 @@ services:
   python-loader:
     build: ./carga-datos
     image: edc-python-loader
-    volumes:
-      - ./uploads:/app/uploads
+    container_name: edc-python-loader
     environment:
       DB_HOST: db
       DB_PORT: 5432
@@ -31,10 +30,9 @@ services:
     build:
       context: ./api
     container_name: edc-api
-    volumes:
-      - ./uploads:/app/uploads
     depends_on:
       - db
+      - python-loader
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/finanzas
       SPRING_DATASOURCE_USERNAME: root

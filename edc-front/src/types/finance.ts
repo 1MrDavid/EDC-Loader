@@ -60,3 +60,11 @@ export interface BalanceMensualDTO {
   promedio_ingreso: number;
   promedio_egreso: number;
 }
+
+export interface FlujoDiarioDTO {
+  fecha: string;          // "2025-10-01"
+  ingresos: number;       // Cantidad de transacciones (count)
+  egresos: number;        // Cantidad de transacciones (count)
+  totalIngresos: number;  // Monto total (sum)
+  totalEgresos: number;   // Monto total (sum)
+}

@@ -11,7 +11,8 @@ export const Dashboard = () => {
     movimientosData, 
     filters, 
     cuentas,
-    actions 
+    actions ,
+    flujoDiario
   } = useDashboardData();
 
   // Generador simple de años
@@ -67,10 +68,7 @@ export const Dashboard = () => {
 
             {/* Columna Derecha: Gráfico visual */}
             <div className="lg:col-span-2">
-               {/* Pasamos los movimientos para que el gráfico los procese */}
-               {movimientosData?.content && (
-                 <DailyFlowChart movimientos={movimientosData.content} />
-               )}
+              <DailyFlowChart data={flujoDiario} />
             </div>
             
           </div>
@@ -109,10 +107,12 @@ export const Dashboard = () => {
           </div>
 
           {/* TABLA */}
-          <MovimientosTable data={movimientosData?.content || []} />
-
-          {/* Paginación (igual que antes) */}
-          {/* ... footer paginación ... */}
+          <MovimientosTable 
+            data={movimientosData?.content || []} 
+            currentPage={filters.page}
+            totalPages={movimientosData?.totalPages || 1}
+            onPageChange={actions.setPage}
+          />
 
         </section>
       </main>

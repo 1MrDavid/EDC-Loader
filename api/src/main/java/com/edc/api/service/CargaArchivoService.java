@@ -7,6 +7,7 @@ public interface CargaArchivoService {
 
     CargaArchivoResponseDTO cargarEstadoCuenta(
             MultipartFile archivo,
-            Long cuentaId
+            Long cuentaId,
+            String banco
     );
 }

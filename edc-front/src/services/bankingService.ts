@@ -1,5 +1,5 @@
 import { api } from "./api";
-import { type BalanceMensualDTO, type PageResponse, type CuentaDTO, type MovimientoDTO } from "../types/finance";
+import { type BalanceMensualDTO, type PageResponse, type CuentaDTO, type MovimientoDTO, type FlujoDiarioDTO } from "../types/finance";
 
 export const obtenerCuentas = async (): Promise<CuentaDTO[]> => {
   const response = await api.get<CuentaDTO[]>("/cuentas");
@@ -67,4 +67,14 @@ export const obtenerFechaMasReciente = async (cuentaId?: number): Promise<string
     console.error("No se pudo obtener la fecha reciente", error);
     return null; 
   }
+};
+
+export const obtenerFlujoDiario = async (cuentaId: number, month: number, year: number): Promise<FlujoDiarioDTO[]> => {
+  // Construimos el periodo: YYYY-MM-01
+  const periodo = `${year}-${month.toString().padStart(2, '0')}-01`;
+  
+  const response = await api.get<FlujoDiarioDTO[]>("/movimientos/flujo-diario", {
+    params: { periodo, cuentaId }
+  });
+  return response.data;
 };

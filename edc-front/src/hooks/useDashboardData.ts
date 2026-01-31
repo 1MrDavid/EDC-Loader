@@ -4,9 +4,10 @@ import {
   obtenerCuentas, 
   obtenerMovimientos, 
   obtenerBalanceMensual,
-  obtenerFechaMasReciente // <--- Importamos
+  obtenerFechaMasReciente, // <--- Importamos
+  obtenerFlujoDiario
 } from "../services/bankingService";
-import { type BalanceMensualDTO } from "../types/finance";
+import { type BalanceMensualDTO, type FlujoDiarioDTO } from "../types/finance";
 
 export const useDashboardData = () => {
   // Inicializamos con la fecha actual por defecto (fallback)
@@ -19,6 +20,12 @@ export const useDashboardData = () => {
   const cuentasQuery = useQuery({
     queryKey: ["cuentas"],
     queryFn: obtenerCuentas,
+  });
+
+  const flujoDiarioQuery = useQuery({
+    queryKey: ["flujoDiario", month, year, selectedAccountId],
+    queryFn: () => selectedAccountId ? obtenerFlujoDiario(selectedAccountId, month, year) : Promise.resolve([]),
+    enabled: !!selectedAccountId, // Solo ejecuta si hay cuenta seleccionada
   });
 
   // Seleccionar la primera cuenta automáticamente
@@ -57,9 +64,15 @@ export const useDashboardData = () => {
 
   // 2. Cargar Movimientos (Usando los estados que ahora se auto-actualizan)
   const movimientosQuery = useQuery({
-    queryKey: ["movimientos", page, month, year, selectedAccountId],
-    queryFn: () => obtenerMovimientos({ page, month, year, /* cuentaId: selectedAccountId */ }), 
+    queryKey: ["movimientos", page, month, year, selectedAccountId], // La key incluye la cuenta, bien.
+    queryFn: () => obtenerMovimientos({ 
+      page, 
+      month, 
+      year, 
+      //cuentaId: selectedAccountId
+    }), 
     placeholderData: (prev) => prev,
+    enabled: !!selectedAccountId,
   });
 
   // 3. Cargar Balance
@@ -70,10 +83,12 @@ export const useDashboardData = () => {
   });
 
   return {
-    isLoading: cuentasQuery.isLoading || balanceQuery.isLoading || fechaRecienteQuery.isLoading,
+    isLoading: cuentasQuery.isLoading || movimientosQuery.isLoading || flujoDiarioQuery.isLoading,
     cuentas: cuentasQuery.data || [],
     movimientosData: movimientosQuery.data,
     balanceMensual: balanceQuery.data as BalanceMensualDTO | null,
+
+    flujoDiario: flujoDiarioQuery.data || [],
     
     filters: { page, month, year, selectedAccountId },
     actions: { setPage, setMonth, setYear, setSelectedAccountId }

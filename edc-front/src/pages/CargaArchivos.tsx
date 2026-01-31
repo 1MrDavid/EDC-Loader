@@ -25,12 +25,21 @@ export const CargaArchivos = () => {
     e.preventDefault();
     if (!selectedFile || !selectedCuentaId) return;
 
+    const cuentaSeleccionada = cuentas?.find(c => c.id === Number(selectedCuentaId));
+
+    if (!cuentaSeleccionada) {
+      setError("Error: No se pudo identificar el banco de la cuenta seleccionada.");
+      return;
+    }
+
+    const nombreBanco = cuentaSeleccionada.cuenta;
+
     setUploading(true);
     setResultado(null);
     setError(null);
 
     try {
-      const response = await subirEstadoCuenta(selectedFile, Number(selectedCuentaId));
+      const response = await subirEstadoCuenta(selectedFile, Number(selectedCuentaId), nombreBanco);
       setResultado(response);
     } catch (err) {
       console.error(err);

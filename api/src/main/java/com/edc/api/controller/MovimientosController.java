@@ -1,5 +1,6 @@
 package com.edc.api.controller;
 
+import com.edc.api.dto.FlujoDiarioDTO;
 import com.edc.api.dto.MovimientoDTO;
 import com.edc.api.model.Movimiento;
 import com.edc.api.repository.MovimientoRepository;
@@ -10,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +26,7 @@ public class MovimientosController {
 
     private final MovimientoService movimientoService;
 
+    // TODO: Agregar cuentaId a esto y descomentar en el hook de React
     @GetMapping("/page")
     public ResponseEntity<Page<MovimientoDTO>> obtenerMovimientosPaginados(
             @RequestParam LocalDate inicio,
@@ -55,5 +58,13 @@ public class MovimientosController {
         }
 
         return movimientoService.obtenerFechaValorMasReciente();
+    }
+
+    @GetMapping("/flujo-diario")
+    public List<FlujoDiarioDTO> flujoDiario(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate periodo,
+            @RequestParam int cuentaId
+    ) {
+        return movimientoService.obtenerFlujoDiarioPorMes(periodo, cuentaId);
     }
 }

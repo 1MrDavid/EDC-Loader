@@ -26,14 +26,14 @@ public class MovimientosController {
 
     private final MovimientoService movimientoService;
 
-    // TODO: Agregar cuentaId a esto y descomentar en el hook de React
     @GetMapping("/page")
     public ResponseEntity<Page<MovimientoDTO>> obtenerMovimientosPaginados(
             @RequestParam LocalDate inicio,
             @RequestParam LocalDate fin,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "fechaAdd,desc") String[] sort
+            @RequestParam(defaultValue = "fechaAdd,desc") String[] sort,
+            @RequestParam(required = false) Integer cuentaId
     ) {
 
         Sort sorting = Sort.by(
@@ -44,7 +44,7 @@ public class MovimientosController {
 
         Pageable pageable = PageRequest.of(page, size, sorting);
 
-        Page<MovimientoDTO> pagina = movimientoService.obtenerPorPagina(inicio, fin, pageable);
+        Page<MovimientoDTO> pagina = movimientoService.obtenerPorPagina(inicio, fin, cuentaId, pageable);
 
         return ResponseEntity.ok(pagina);
     }

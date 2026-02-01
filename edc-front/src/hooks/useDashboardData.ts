@@ -69,7 +69,7 @@ export const useDashboardData = () => {
       page, 
       month, 
       year, 
-      //cuentaId: selectedAccountId
+      cuentaId: selectedAccountId
     }), 
     placeholderData: (prev) => prev,
     enabled: !!selectedAccountId,

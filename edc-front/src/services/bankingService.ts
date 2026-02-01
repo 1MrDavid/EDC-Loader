@@ -1,6 +1,5 @@
 import { api } from "./api";
-import { type BalanceMensualDTO, type PageResponse, type CuentaDTO, type MovimientoDTO, type FlujoDiarioDTO } from "../types/finance";
-
+import { type BalanceMensualDTO, type PageResponse, type CuentaDTO, type MovimientoDTO, type FlujoDiarioDTO, type BalanceGlobalMensualDTO } from "../types/finance";
 export const obtenerCuentas = async (): Promise<CuentaDTO[]> => {
   const response = await api.get<CuentaDTO[]>("/cuentas");
   return response.data;
@@ -10,9 +9,10 @@ interface MovimientoFilters {
   page?: number;
   month?: number; // 1 - 12
   year?: number;
+  cuentaId?: number | null;
 }
 
-export const obtenerMovimientos = async ({ page = 0, month, year }: MovimientoFilters): Promise<PageResponse<MovimientoDTO>> => {
+export const obtenerMovimientos = async ({ page = 0, month, year, cuentaId }: MovimientoFilters): Promise<PageResponse<MovimientoDTO>> => {
   // 1. Validar que tengamos mes y año (o usar actuales)
   const currentYear = year || new Date().getFullYear();
   const currentMonth = month || new Date().getMonth() + 1;
@@ -32,7 +32,8 @@ export const obtenerMovimientos = async ({ page = 0, month, year }: MovimientoFi
       fin, 
       page, 
       size: 10,
-      sort: 'fechaAdd,desc'
+      sort: 'fechaAdd,desc',
+      cuentaId
     }, 
   });
   
@@ -77,4 +78,10 @@ export const obtenerFlujoDiario = async (cuentaId: number, month: number, year: 
     params: { periodo, cuentaId }
   });
   return response.data;
+};
+
+// Obtener historial global para el gráfico principal
+export const obtenerHistorialGlobal = async () => {
+  const { data } = await api.get<BalanceGlobalMensualDTO[]>("/balance-mensual/global");
+  return data;
 };

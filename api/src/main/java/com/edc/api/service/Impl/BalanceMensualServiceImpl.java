@@ -1,6 +1,7 @@
 package com.edc.api.service.Impl;
 
 import com.edc.api.dto.BalanceMensualDTO;
+import com.edc.api.dto.BalancesMensualesDTO;
 import com.edc.api.exception.ResourceNotFoundException;
 import com.edc.api.mapper.BalanceMensualMapper;
 import com.edc.api.model.BalanceMensual;
@@ -11,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @AllArgsConstructor
@@ -36,5 +38,13 @@ public class BalanceMensualServiceImpl implements BalanceMensualService {
                 );
 
         return mapper.toDto(balance);
+    }
+
+    public List<BalancesMensualesDTO> resumenGlobal() {
+        return repository.findResumenMensualGlobal();
+    }
+
+    public List<BalancesMensualesDTO> resumenPorCuenta(int cuentaId) {
+        return repository.findResumenMensualPorCuenta(cuentaId);
     }
 }

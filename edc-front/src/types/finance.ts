@@ -68,3 +68,9 @@ export interface FlujoDiarioDTO {
   totalIngresos: number;  // Monto total (sum)
   totalEgresos: number;   // Monto total (sum)
 }
+
+export interface BalanceGlobalMensualDTO {
+  periodo: string; // "2025-10-01"
+  totalIngresos: number;
+  totalEgresos: number;
+}

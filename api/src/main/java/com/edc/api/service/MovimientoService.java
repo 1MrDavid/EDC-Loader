@@ -13,6 +13,7 @@ public interface MovimientoService {
     Page<MovimientoDTO> obtenerPorPagina(
             LocalDate inicio,
             LocalDate fin,
+            Integer cuentaId,
             Pageable pageable
     );
 

@@ -14,9 +14,16 @@ import java.util.List;
 public interface MovimientoRepository extends JpaRepository<Movimiento, Long> {
 
     // Busca por rango de fechas y soporta paginación
-    Page<Movimiento> findByFechaEfecBetween(
-            LocalDate inicio,
-            LocalDate fin,
+    @Query("""
+        SELECT m
+        FROM Movimiento m
+        WHERE m.fechaEfec BETWEEN :inicio AND :fin
+          AND (:cuentaId IS NULL OR m.cuentaId = :cuentaId)
+    """)
+    Page<Movimiento> findMovimientos(
+            @Param("inicio") LocalDate inicio,
+            @Param("fin") LocalDate fin,
+            @Param("cuentaId") Integer cuentaId,
             Pageable pageable
     );
 

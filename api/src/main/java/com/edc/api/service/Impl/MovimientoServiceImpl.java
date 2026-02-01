@@ -23,10 +23,11 @@ public class MovimientoServiceImpl implements MovimientoService {
     public Page<MovimientoDTO> obtenerPorPagina(
             LocalDate inicio,
             LocalDate fin,
+            Integer cuentaId,
             Pageable pageable
     ) {
         return repository
-                .findByFechaEfecBetween(inicio, fin, pageable)
+                .findMovimientos(inicio, fin, cuentaId, pageable)
                 .map(mapper::toDto);
     }
 

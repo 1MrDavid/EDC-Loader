@@ -45,7 +45,7 @@ def limpiar_valor_dolar(valor_dolar):
     return None
 
 # Cargar y procesar el CSV
-df = pd.read_csv('tipo_cambio_BCV_2025_por_mes.csv')
+df = pd.read_csv('/app/scripts/tipo_cambio_BCV_2025_por_mes.csv')
 
 valor_numerico = 52.03
 ano = '2025'

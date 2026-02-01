@@ -8,7 +8,7 @@ export const Header = () => {
       <nav className="hidden md:flex gap-8 text-sm font-medium text-gray-600">
         <Link to="/" className="hover:text-black transition">Inicio</Link>
         <Link to="/cargar" className="text-black font-semibold">Cargar Archivos</Link> {/* Link activo */}
-        <a href="#" className="hover:text-black transition">Reportes</a>
+        <Link to="/divisas" className="hover:text-black transition">Valor Dolar</Link>
       </nav>
 
       {/* ... User info ... */}

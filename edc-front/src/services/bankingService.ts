@@ -1,5 +1,5 @@
 import { api } from "./api";
-import { type BalanceMensualDTO, type PageResponse, type CuentaDTO, type MovimientoDTO, type FlujoDiarioDTO, type BalanceGlobalMensualDTO } from "../types/finance";
+import { type BalanceMensualDTO, type PageResponse, type CuentaDTO, type MovimientoDTO, type FlujoDiarioDTO, type BalanceGlobalMensualDTO, type ValorDolarDTO } from "../types/finance";
 export const obtenerCuentas = async (): Promise<CuentaDTO[]> => {
   const response = await api.get<CuentaDTO[]>("/cuentas");
   return response.data;
@@ -80,8 +80,14 @@ export const obtenerFlujoDiario = async (cuentaId: number, month: number, year: 
   return response.data;
 };
 
-// Obtener historial global para el gráfico principal
+// Obtener historial global para el grafico principal
 export const obtenerHistorialGlobal = async () => {
   const { data } = await api.get<BalanceGlobalMensualDTO[]>("/balance-mensual/global");
+  return data;
+};
+
+// Obtener historial del valor del dolar
+export const obtenerHistorialDolar = async () => {
+  const { data } = await api.get<ValorDolarDTO[]>("/valor-dolar");
   return data;
 };

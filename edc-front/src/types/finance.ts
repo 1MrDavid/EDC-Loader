@@ -73,4 +73,14 @@ export interface BalanceGlobalMensualDTO {
   periodo: string; // "2025-10-01"
   totalIngresos: number;
   totalEgresos: number;
+  totalIngresosDolar: number;
+  totalEgresosDolar: number;
+}
+
+export interface ValorDolarDTO {
+  fecha: number; // YYYYMMDD
+  dia: number;
+  mes: number;
+  ano: number;
+  precio: number;
 }

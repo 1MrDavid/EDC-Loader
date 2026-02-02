@@ -36,5 +36,8 @@ public class BalanceMensual {
     private double flujo_neto;
     private double promedio_ingreso;
     private double promedio_egreso;
+
+    private double ingresos_total_dolar;
+    private double egresos_total_dolar;
 }
 

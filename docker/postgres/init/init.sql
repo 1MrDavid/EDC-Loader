@@ -69,6 +69,9 @@ CREATE TABLE balance_mensual (
 	flujo_neto NUMERIC NOT NULL,              -- ingresos_total - egresos_total
 	promedio_ingreso NUMERIC,
 	promedio_egreso NUMERIC,
+    
+    ingresos_total_dolar NUMERIC(18,2),
+    egresos_total_dolar NUMERIC(18,2),
 
     CONSTRAINT fk_balance_cuenta
         FOREIGN KEY (cuenta_id) REFERENCES cuenta(id),

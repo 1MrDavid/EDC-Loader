@@ -30,7 +30,9 @@ def recalcular_balance_mensual(cursor, cuenta_id):
             m.fechavalor,
             m.saldo,
             m.ingreso,
-            m.egreso
+            m.egreso,
+            m.ingresodolar,
+            m.egresodolar
         FROM movimientos m
         WHERE m.cuenta_id = %s
     ),
@@ -57,6 +59,8 @@ def recalcular_balance_mensual(cursor, cuenta_id):
         monto_final,
         ingresos_total,
         egresos_total,
+        ingresos_total_dolar,
+        egresos_total_dolar,
         numero_ingresos,
         numero_egresos,
         saldo_variacion,
@@ -69,8 +73,10 @@ def recalcular_balance_mensual(cursor, cuenta_id):
         pm.periodo,
         pm.monto_inicio,
         um.monto_final,
-        SUM(mm.ingreso) AS ingresos_total,
-        SUM(mm.egreso) AS egresos_total,
+        SUM(mm.ingreso)      AS ingresos_total,
+        SUM(mm.egreso)       AS egresos_total,
+        SUM(mm.ingresodolar) AS ingresos_total_dolar,
+        SUM(mm.egresodolar)  AS egresos_total_dolar,
         COUNT(*) FILTER (WHERE mm.ingreso > 0) AS numero_ingresos,
         COUNT(*) FILTER (WHERE mm.egreso > 0) AS numero_egresos,
         (um.monto_final - pm.monto_inicio) AS saldo_variacion,
@@ -91,6 +97,8 @@ def recalcular_balance_mensual(cursor, cuenta_id):
         monto_final = EXCLUDED.monto_final,
         ingresos_total = EXCLUDED.ingresos_total,
         egresos_total = EXCLUDED.egresos_total,
+        ingresos_total_dolar = EXCLUDED.ingresos_total_dolar,
+        egresos_total_dolar = EXCLUDED.egresos_total_dolar,
         numero_ingresos = EXCLUDED.numero_ingresos,
         numero_egresos = EXCLUDED.numero_egresos,
         saldo_variacion = EXCLUDED.saldo_variacion,

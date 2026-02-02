@@ -10,4 +10,8 @@ public interface BalancesMensualesDTO {
     BigDecimal getTotalIngresos();
 
     BigDecimal getTotalEgresos();
+
+    BigDecimal getTotalIngresosDolar();
+
+    BigDecimal getTotalEgresosDolar();
 }

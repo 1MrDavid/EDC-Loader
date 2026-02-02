@@ -20,18 +20,22 @@ public interface BalanceMensualRepository
     SELECT 
         b.periodo AS periodo,
         SUM(b.ingresos_total) AS totalIngresos,
-        SUM(b.egresos_total) AS totalEgresos
+        SUM(b.egresos_total) AS totalEgresos,
+        SUM(b.ingresos_total_dolar) AS totalIngresosDolar,
+        SUM(b.egresos_total_dolar) AS totalEgresosDolar
     FROM BalanceMensual b
     GROUP BY b.periodo
     ORDER BY b.periodo
     """)
-
     List<BalancesMensualesDTO> findResumenMensualGlobal();
+
     @Query("""
     SELECT 
         b.periodo AS periodo,
         b.ingresos_total AS totalIngresos,
-        b.egresos_total AS totalEgresos
+        b.egresos_total AS totalEgresos,
+        b.ingresos_total_dolar AS totalIngresosDolar,
+        b.egresos_total_dolar AS totalEgresosDolar
     FROM BalanceMensual b
     WHERE b.cuenta_id = :cuentaId
     ORDER BY b.periodo

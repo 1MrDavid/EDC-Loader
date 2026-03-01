@@ -2,6 +2,7 @@ import logging
 import os
 from datetime import date
 from loaders.bfc import procesar_bfc
+from loaders.mercantil import procesar_mercantil
 
 # ==========================================
 # MAPA DE BANCOS (FACTORY)
@@ -9,7 +10,7 @@ from loaders.bfc import procesar_bfc
 # ==========================================
 BANK_LOADERS = {
     "BFC": procesar_bfc,
-    # "MERCANTIL": procesar_mercantil,  <-- Futuro
+    "MERCANTIL": procesar_mercantil,
     # "BANESCO": procesar_banesco       <-- Futuro
 }
 

@@ -6,7 +6,20 @@ CREATE TABLE cuenta (
 
 CREATE INDEX IF NOT EXISTS idx_cuenta_numero ON cuenta (numero);
 
-INSERT INTO cuenta (numero, banco) VALUES ('01510100803000885044', 'BFC');
+CREATE TABLE categorias (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL,
+    tipo VARCHAR(20) NOT NULL,
+    activa BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE reglas_categorizacion (
+    id SERIAL PRIMARY KEY,
+    patron VARCHAR(100) NOT NULL,
+    tipo_patron VARCHAR(20) NOT NULL, 
+    categoria_id INTEGER REFERENCES categorias(id),
+    activa BOOLEAN DEFAULT TRUE
+);
 
 CREATE TABLE IF NOT EXISTS movimientos (
     id SERIAL PRIMARY KEY,
@@ -23,7 +36,7 @@ CREATE TABLE IF NOT EXISTS movimientos (
     egresoDolar NUMERIC,
     saldoDolar NUMERIC,
     tasaDolar NUMERIC,
-    categoria TEXT,
+    categoria_id INTEGER REFERENCES categorias(id),
 	
 	CONSTRAINT fk_movimientos_cuenta
         FOREIGN KEY (cuenta_id)

@@ -21,10 +21,10 @@ export const MovimientosTable = ({ data, currentPage, totalPages, onPageChange }
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
-          {/* ... tu thead existente ... */}
           <tbody className="divide-y divide-slate-100">
         {data.map(m => (
           <tr key={m.id} className="hover:bg-slate-50 transition-colors">
+            <td className="px-6 py-4 text-sm text-slate-600">{m.cuentaId}</td>
             <td className="px-6 py-4 text-sm text-slate-600">{m.fechaefec}</td>
             <td className="px-6 py-4 text-sm">
               <span className="font-medium text-slate-900 block">{m.descripcion}</span>
@@ -44,13 +44,18 @@ export const MovimientosTable = ({ data, currentPage, totalPages, onPageChange }
             <td className="px-6 py-4 text-sm text-center text-slate-500 font-mono">
               {m.saldo?.toFixed(2) ?? "-"}
             </td>
+            <td className="px-6 py-4 text-sm text-slate-600">
+              {m.categoria
+                ? `${m.categoria}`
+                : <a className="text-blue-400 cursor-pointer font-mono">Agregar categoría</a>
+              }
+            </td>
           </tr>
           ))}
           </tbody>
         </table>
       </div>
 
-    {/* CONTROLES DE PAGINACIÓN RECUPERADOS */}
       <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
         <span className="text-sm text-slate-500">
           Página <span className="font-semibold text-slate-700">{currentPage + 1}</span> de <span className="font-semibold text-slate-700">{totalPages}</span>

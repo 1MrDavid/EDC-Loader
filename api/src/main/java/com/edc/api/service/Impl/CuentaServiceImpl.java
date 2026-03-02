@@ -1,7 +1,9 @@
 package com.edc.api.service.Impl;
 
+import com.edc.api.dto.CrearCuentaDTO;
 import com.edc.api.dto.CuentaDTO;
 import com.edc.api.mapper.CuentaMapper;
+import com.edc.api.model.Cuenta;
 import com.edc.api.repository.CuentaRepository;
 import com.edc.api.service.CuentaService;
 import lombok.AllArgsConstructor;
@@ -21,5 +23,15 @@ public class CuentaServiceImpl implements CuentaService {
                 .stream()
                 .map(mapper::toDto)
                 .toList();
+    }
+
+    @Override
+    public CuentaDTO crearCuenta(CrearCuentaDTO dto) {
+
+        Cuenta cuenta = mapper.toEntity(dto);
+
+        Cuenta guardada = repository.save(cuenta);
+
+        return mapper.toDto(guardada);
     }
 }

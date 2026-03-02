@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom"; 
 import { GlobalTrendChart } from "../components/charts/GlobalTrendChart";
 import { AccountCard } from "../components/cards/AccountCard";
@@ -5,8 +7,15 @@ import { MovimientosTable } from "../components/tables/MovimientosTable";
 import { Header } from "../components/layout/Header";
 import { useHomeData } from "../hooks/useHomeData"; // <--- Importamos el nuevo hook
 
+import { crearCuenta } from "../services/bankingService";
+import { type CrearCuentaDTO } from "../types/finance";
+import { AddAccountModal } from "../components/modals/AddAccountModal";
+import { AddAccountCard } from "../components/cards/AddAccountCard";
+
 export const Home = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient(); // Para invalidar y refrescar la caché
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Usamos el hook que ya tiene la lógica de fechas inteligentes
   const { 
@@ -16,6 +25,25 @@ export const Home = () => {
     filters, 
     actions 
   } = useHomeData();
+
+  // MUTATION: Para crear la cuenta
+  const crearCuentaMutation = useMutation({
+    mutationFn: crearCuenta,
+    onSuccess: () => {
+      // 1. Refresca la lista de cuentas automáticamente
+      queryClient.invalidateQueries({ queryKey: ["cuentas"] });
+      // 2. Cierra el modal
+      setIsModalOpen(false);
+    },
+    onError: (error) => {
+      console.error("Error al crear cuenta", error);
+      alert("Hubo un error al crear la cuenta.");
+    }
+  });
+
+  const handleCrearCuenta = (data: CrearCuentaDTO) => {
+    crearCuentaMutation.mutate(data);
+  };
 
   // Generador de años para el select
   const years = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
@@ -41,13 +69,19 @@ export const Home = () => {
         <section>
           <h2 className="text-lg font-bold text-slate-800 mb-4">Tus Cuentas</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {cuentas.map(cuenta => (
+            
+            {/* Lista de cuentas existentes */}
+            {Array.isArray(cuentas) && cuentas.map(cuenta => (
               <AccountCard 
                 key={cuenta.id} 
                 cuenta={cuenta} 
                 onClick={() => navigate(`/cuenta/${cuenta.id}`)}
               />
             ))}
+
+            {/* Tarjeta para agregar nueva cuenta */}
+            <AddAccountCard onClick={() => setIsModalOpen(true)} />
+
           </div>
         </section>
 
@@ -106,6 +140,15 @@ export const Home = () => {
         </section>
 
       </main>
+
+      {/* --- EL MODAL OCULTO HASTA QUE SE LE LLAME --- */}
+      <AddAccountModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleCrearCuenta}
+        isLoading={crearCuentaMutation.isPending}
+      />
+
     </div>
   );
 };

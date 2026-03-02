@@ -64,7 +64,9 @@ def procesar_mercantil(ruta_archivo, cuenta_id, cursor, fecha_add):
             continue  # no insertamos este como movimiento 
         elif descripcion_upper == "SALDO FINAL":
             if Saldo is not None and Saldo != Ingreso:
-                logging.warning("Saldo final no coincide con saldo calculado")
+                logging.warning(
+                    f"Saldo final Excel: {Ingreso} | Saldo calculado: {Saldo}"
+                )
             continue
         else:
             if Saldo is not None:

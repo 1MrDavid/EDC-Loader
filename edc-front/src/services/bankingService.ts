@@ -1,5 +1,5 @@
 import { api } from "./api";
-import { type BalanceMensualDTO, type PageResponse, type CuentaDTO, type MovimientoDTO, type FlujoDiarioDTO, type BalanceGlobalMensualDTO, type ValorDolarDTO } from "../types/finance";
+import { type CrearCuentaDTO, type BalanceMensualDTO, type PageResponse, type CuentaDTO, type MovimientoDTO, type FlujoDiarioDTO, type BalanceGlobalMensualDTO, type ValorDolarDTO } from "../types/finance";
 export const obtenerCuentas = async (): Promise<CuentaDTO[]> => {
   const response = await api.get<CuentaDTO[]>("/cuentas");
   return response.data;
@@ -89,5 +89,10 @@ export const obtenerHistorialGlobal = async () => {
 // Obtener historial del valor del dolar
 export const obtenerHistorialDolar = async () => {
   const { data } = await api.get<ValorDolarDTO[]>("/valor-dolar");
+  return data;
+};
+
+export const crearCuenta = async (dto: CrearCuentaDTO) => {
+  const { data } = await api.post("/cuentas", dto);
   return data;
 };

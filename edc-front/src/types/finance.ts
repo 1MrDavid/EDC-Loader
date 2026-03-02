@@ -6,6 +6,7 @@ export interface CuentaDTO {
 
 export interface MovimientoDTO {
   id: number;
+  cuentaId: number;
   fechaAdd: string;
   fechavalor: string | null;
   fechaefec: string | null;
@@ -83,4 +84,9 @@ export interface ValorDolarDTO {
   mes: number;
   ano: number;
   precio: number;
+}
+
+export interface CrearCuentaDTO {
+  numero: string;
+  banco: string;
 }

@@ -1,0 +1,6 @@
+projectKey=EDC-Front
+serverUrl=http://localhost:9000
+serverVersion=26.3.0.120487
+dashboardUrl=http://localhost:9000/dashboard?id=EDC-Front
+ceTaskId=8a095428-1d5e-4806-b027-a112dc4e62e4
+ceTaskUrl=http://localhost:9000/api/ce/task?id=8a095428-1d5e-4806-b027-a112dc4e62e4

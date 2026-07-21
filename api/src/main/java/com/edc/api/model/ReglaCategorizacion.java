@@ -22,8 +22,8 @@ public class ReglaCategorizacion {
     @Column(name = "tipo_patron")
     private String tipoPatron;
 
-    @Column(name = "categoria_id")
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "categoria_id")
     private Categoria categoria;
 
     private Boolean activa;

@@ -3,6 +3,7 @@ import { Dashboard } from "../pages/Dashboard";
 import { CargaArchivos } from "../pages/CargaArchivos"; // Importar
 import { Home } from "../pages/Home";
 import { DollarPage } from "../pages/DollarPage";
+import { CategoriasPage } from "../pages/CategoriasPage";
 
 function App() {
   return (
@@ -17,7 +18,8 @@ function App() {
 
       <Route path="/cargar" element={<CargaArchivos />} />
       <Route path="/divisas" element={<DollarPage />} />
-      </Routes>
+      <Route path="/categorias" element={<CategoriasPage />} />
+    </Routes>
   );
 }
 export default App;

@@ -9,6 +9,7 @@ export const Header = () => {
         <Link to="/" className="hover:text-black transition">Inicio</Link>
         <Link to="/cargar" className="text-black font-semibold">Cargar Archivos</Link> {/* Link activo */}
         <Link to="/divisas" className="hover:text-black transition">Valor Dolar</Link>
+        <Link to="/categorias" className="hover:text-black transition">Categorias</Link>
       </nav>
 
       {/* ... User info ... */}

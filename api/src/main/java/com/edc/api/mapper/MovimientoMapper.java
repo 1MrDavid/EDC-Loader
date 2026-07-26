@@ -1,5 +1,6 @@
 package com.edc.api.mapper;
 
+import com.edc.api.dto.CategoriaResumenDTO;
 import com.edc.api.dto.MovimientoDTO;
 import com.edc.api.model.Movimiento;
 import org.springframework.stereotype.Component;
@@ -23,7 +24,12 @@ public class MovimientoMapper {
                 entity.getEgresodolar(),
                 entity.getSaldodolar(),
                 entity.getTasadolar(),
-                entity.getCategoria()
+                entity.getCategoria() != null ? new CategoriaResumenDTO(
+                    entity.getCategoria().getId(),
+                    entity.getCategoria().getNombre(),
+                    entity.getCategoria().getColor(),
+                    entity.getCategoria().getIcono()
+                ) : null
         );
     }
 }

@@ -42,5 +42,7 @@ public class Movimiento {
     private Double saldodolar;
     private Double tasadolar;
 
-    private String categoria;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "categoria_id")
+    private Categoria categoria;
 }

@@ -13,12 +13,14 @@ import lombok.NoArgsConstructor;
 public class Categoria {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String nombre;
-
     private String tipo; // INGRESO / EGRESO
+    
+    private String color; // Ej: "#ef4444" o "bg-red-500"
+    private String icono; // Ej: "shopping-bag" o un emoji "🛒"
 
     private Boolean activa;
 }

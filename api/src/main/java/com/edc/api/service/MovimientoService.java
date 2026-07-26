@@ -2,6 +2,8 @@ package com.edc.api.service;
 
 import com.edc.api.dto.FlujoDiarioDTO;
 import com.edc.api.dto.MovimientoDTO;
+import com.edc.api.model.Categoria;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -22,4 +24,8 @@ public interface MovimientoService {
     LocalDate obtenerFechaValorMasReciente();
 
     List<FlujoDiarioDTO> obtenerFlujoDiarioPorMes(LocalDate periodo, int cuentaId);
+
+    int aplicarReglaMasiva(Categoria categoria, String patron);
+    
+    void aplicarTodasLasReglas();
 }

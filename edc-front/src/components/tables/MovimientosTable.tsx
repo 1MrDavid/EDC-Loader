@@ -1,4 +1,5 @@
 import { type MovimientoDTO } from "../../types/finance";
+import { CategoryBadge } from "../cards/CategoryBadge"; // Ajusta la ruta
 
 interface Props {
   data: MovimientoDTO[];
@@ -45,10 +46,13 @@ export const MovimientosTable = ({ data, currentPage, totalPages, onPageChange }
               {m.saldo?.toFixed(2) ?? "-"}
             </td>
             <td className="px-6 py-4 text-sm text-slate-600">
-              {m.categoria
-                ? `${m.categoria}`
-                : <a className="text-blue-400 cursor-pointer font-mono">Agregar categoría</a>
-              }
+              {m.categoria ? (
+                <CategoryBadge categoria={m.categoria} />
+              ) : (
+                <button className="text-blue-500 hover:text-blue-700 text-xs font-semibold px-3 py-1 border border-dashed border-blue-200 rounded-full hover:bg-blue-50 transition-colors">
+                  + Asignar
+                </button>
+              )}
             </td>
           </tr>
           ))}

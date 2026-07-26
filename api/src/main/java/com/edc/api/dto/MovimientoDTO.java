@@ -22,6 +22,5 @@ public record MovimientoDTO(
         Double saldodolar,
         Double tasadolar,
 
-        String categoria
-) {
-}
+        CategoriaResumenDTO categoria
+) {}

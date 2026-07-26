@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.stereotype.Component;
 
 @Entity
 @Table(name = "reglas_categorizacion")
@@ -14,7 +13,7 @@ import org.springframework.stereotype.Component;
 public class ReglaCategorizacion {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String patron;

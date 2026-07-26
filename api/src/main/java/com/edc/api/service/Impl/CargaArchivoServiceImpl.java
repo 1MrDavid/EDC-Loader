@@ -9,12 +9,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import com.edc.api.service.MovimientoService;
 
 @Service
 @RequiredArgsConstructor
 public class CargaArchivoServiceImpl implements CargaArchivoService {
 
     private final WebClient webClient;
+
+    private final MovimientoService movimientoService;
 
     private static final String PYTHON_URL = "http://python-loader:5000/api/cargar-estado";
 
@@ -55,6 +58,8 @@ public class CargaArchivoServiceImpl implements CargaArchivoService {
                         response.message()
                 );
             }
+
+            movimientoService.aplicarTodasLasReglas();
 
             return new CargaArchivoResponseDTO(
                     archivo.getOriginalFilename(),

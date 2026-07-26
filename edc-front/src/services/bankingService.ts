@@ -1,5 +1,5 @@
 import { api } from "./api";
-import { type CrearCuentaDTO, type BalanceMensualDTO, type PageResponse, type CuentaDTO, type MovimientoDTO, type FlujoDiarioDTO, type BalanceGlobalMensualDTO, type ValorDolarDTO } from "../types/finance";
+import { type CrearCuentaDTO, type BalanceMensualDTO, type PageResponse, type CuentaDTO, type MovimientoDTO, type FlujoDiarioDTO, type BalanceGlobalMensualDTO, type ValorDolarDTO, type CategoriaResumenMesDTO } from "../types/finance";
 export const obtenerCuentas = async (): Promise<CuentaDTO[]> => {
   const response = await api.get<CuentaDTO[]>("/cuentas");
   return response.data;
@@ -95,4 +95,11 @@ export const obtenerHistorialDolar = async () => {
 export const crearCuenta = async (dto: CrearCuentaDTO) => {
   const { data } = await api.post("/cuentas", dto);
   return data;
+};
+
+export const obtenerResumenCategorias = async (month: number, year: number): Promise<CategoriaResumenMesDTO[]> => {
+  const response = await api.get<CategoriaResumenMesDTO[]>("/categorias/resumen", {
+    params: { month, year }
+  });
+  return response.data;
 };

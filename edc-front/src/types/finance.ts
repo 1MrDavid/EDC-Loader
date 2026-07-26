@@ -4,6 +4,13 @@ export interface CuentaDTO {
   cuenta: string;
 }
 
+export interface CategoriaResumenDTO {
+  id: number;
+  nombre: string;
+  color: string;
+  icono: string;
+}
+
 export interface MovimientoDTO {
   id: number;
   cuentaId: number;
@@ -22,7 +29,7 @@ export interface MovimientoDTO {
   saldodolar: number | null;
   tasadolar: number | null;
 
-  categoria: string | null;
+  categoria: CategoriaResumenDTO | null;
 }
 
 export interface PageResponse<T> {
@@ -89,4 +96,14 @@ export interface ValorDolarDTO {
 export interface CrearCuentaDTO {
   numero: string;
   banco: string;
+}
+
+export interface CategoriaResumenMesDTO {
+  id: number;
+  nombre: string;
+  tipo: 'INGRESO' | 'EGRESO';
+  color: string;
+  icono: string;
+  movimientosMes: number;
+  montoTotalDolar: number; // El valor que viene del back
 }

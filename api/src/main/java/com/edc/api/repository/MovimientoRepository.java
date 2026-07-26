@@ -8,6 +8,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.edc.api.model.Categoria;
+import org.springframework.data.jpa.repository.Modifying;
+
 import java.time.LocalDate;
 import java.util.List;
 
@@ -62,4 +65,14 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long> {
             @Param("periodo") LocalDate periodo,
             @Param("cuentaId") int cuentaId
     );
+
+    @Modifying
+    @Query("""
+        UPDATE Movimiento m
+        SET m.categoria = :categoria
+        WHERE m.categoria IS NULL
+        AND (LOWER(m.descripcion) LIKE LOWER(CONCAT('%', :patron, '%'))
+             OR LOWER(m.referencia) LIKE LOWER(CONCAT('%', :patron, '%')))
+    """)
+    int aplicarCategoriaRetroactiva(@Param("categoria") Categoria categoria, @Param("patron") String patron);
 }

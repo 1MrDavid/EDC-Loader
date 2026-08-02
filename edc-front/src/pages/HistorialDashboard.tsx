@@ -1,18 +1,17 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom"; 
+import { useNavigate } from "react-router-dom";
 import { GlobalTrendChart } from "../components/charts/GlobalTrendChart";
 import { AccountCard } from "../components/cards/AccountCard";
 import { MovimientosTable } from "../components/tables/MovimientosTable";
-import { Header } from "../components/layout/Header";
-import { useHomeData } from "../hooks/useHomeData"; // <--- Importamos el nuevo hook
+import { useHomeData } from "../hooks/useHomeData";
 
 import { crearCuenta } from "../services/bankingService";
 import { type CrearCuentaDTO } from "../types/finance";
 import { AddAccountModal } from "../components/modals/AddAccountModal";
 import { AddAccountCard } from "../components/cards/AddAccountCard";
 
-export const Home = () => {
+export const HistorialDashboard = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient(); // Para invalidar y refrescar la caché
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -50,7 +49,6 @@ export const Home = () => {
 
   return (
     <div className="bg-slate-50 min-h-screen pb-10">
-      <Header />
       
       <main className="max-w-7xl mx-auto p-8 space-y-8">
         

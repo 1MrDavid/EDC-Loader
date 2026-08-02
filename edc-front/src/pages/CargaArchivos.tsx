@@ -2,7 +2,6 @@ import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useCuentas } from "../hooks/useCuentas"; // Reutilizamos tu hook existente
 import { subirEstadoCuenta } from "../services/uploadService";
 import { type CargaArchivoResponseDTO } from "../types/finance";
-import { Header } from "../components/layout/Header";
 
 export const CargaArchivos = () => {
   const { data: cuentas, isLoading: loadingCuentas } = useCuentas();
@@ -53,7 +52,6 @@ export const CargaArchivos = () => {
 
   return (
     <>
-    <Header />
     <div className="bg-slate-50 min-h-screen p-8">
       <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
         <h1 className="text-2xl font-bold text-slate-900 mb-6">Cargar Estado de Cuenta</h1>

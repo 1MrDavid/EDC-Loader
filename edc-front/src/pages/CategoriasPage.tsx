@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Header } from "../components/layout/Header";
 import { obtenerResumenCategorias, obtenerFechaMasReciente, crearCategoria } from "../services/bankingService";
 import { type CategoriaResumenMesDTO, type CrearCategoriaDTO } from "../types/finance";
 import { CategoryPolarChart } from "../components/charts/CategoryPolarChart";
@@ -85,7 +84,6 @@ export const CategoriasPage = () => {
 
   return (
     <div className="bg-slate-50 min-h-screen pb-10">
-      <Header />
       <main className="max-w-7xl mx-auto p-8">
         
         {/* HEADER CONTROLES */}

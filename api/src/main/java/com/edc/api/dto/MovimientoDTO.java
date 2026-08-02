@@ -13,6 +13,11 @@ public record MovimientoDTO(
         String referencia,
         String descripcion,
 
+        String beneficiario,
+        String identificacion,
+        String telefono,
+        String bancoDestino,
+
         Double egreso,
         Double ingreso,
         Double saldo,

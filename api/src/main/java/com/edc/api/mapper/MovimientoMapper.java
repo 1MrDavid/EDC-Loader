@@ -17,6 +17,12 @@ public class MovimientoMapper {
                 entity.getFechaEfec(),
                 entity.getReferencia(),
                 entity.getDescripcion(),
+                
+                entity.getBeneficiario(),
+                entity.getIdentificacion(),
+                entity.getTelefono(),
+                entity.getBancoDestino(),
+                
                 entity.getEgreso(),
                 entity.getIngreso(),
                 entity.getSaldo(),

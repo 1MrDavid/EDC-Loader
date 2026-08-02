@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { obtenerHistorialDolar } from "../services/bankingService";
-import { Header } from "../components/layout/Header";
 import { DollarTrendChart } from "../components/charts/DollarTrendChart";
 import { DollarHistoryTable } from "../components/tables/DollarHistoryTable";
 
@@ -28,7 +27,6 @@ export const DollarPage = () => {
 
   return (
     <div className="bg-slate-50 min-h-screen pb-10">
-      <Header />
       
       <main className="max-w-7xl mx-auto p-8 space-y-8">
         

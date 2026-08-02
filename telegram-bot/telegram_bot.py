@@ -38,23 +38,40 @@ async def analizar_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 2. Cargar imagen para la IA
         img = PIL.Image.open(ruta_temporal)
 
-        # 3. El Prompt "Mágico" que unifica facturas y screenshots
-        prompt = """
+        # Capturar el mensaje adjunto a la foto para concepto
+        comentario_usuario = update.message.caption or ""
+
+        # 3. El Prompt "Mágico" con Prioridad de Concepto
+        prompt = f'COMENTARIO DEL USUARIO AL ENVIAR LA FOTO: "{comentario_usuario}"\n\n' + """
         Eres un asistente financiero experto. Analiza la imagen adjunta y extrae la información en formato JSON estricto.
         No incluyas markdown ni texto extra, SOLO el JSON.
+        
+        REGLAS IMPORTANTES:
+        - Para RECIBOS DE PUNTO DE VENTA (Facturas):
+          1. El número de referencia DEBE ser el que dice "TRACE" (ej. 007760). Solo si no existe TRACE, usa el que dice "REF" o "RECIBO".
+          2. El "banco_o_comercio" debe ser el Banco dueño del punto de venta (el que sale en el encabezado, ej. BANCO DE VENEZUELA, BNC, etc).
+          3. El "beneficiario" debe ser el nombre real del local/comercio (ej. INVERSIONES VENEGAS 19 12).
+          
+        - Para PAGOS MÓVILES:
+          1. Sigue las reglas normales de extracción.
+          
+        - REGLA PARA EL CONCEPTO:
+          1. Si el "COMENTARIO DEL USUARIO" tiene texto, úsalo EXACTAMENTE como concepto.
+          2. Si el "COMENTARIO DEL USUARIO" está vacío, extrae el "Concepto", "Motivo" o "Detalle" que aparezca escrito en la imagen.
+          3. Solo si no hay comentario tuyo ni concepto en la imagen, asigna null.
         
         Estructura requerida:
         {
             "tipo": "PAGO_MOVIL" o "FACTURA",
-            "monto": <número decimal (ej. 7466.20 o 4300.00)>,
-            "referencia": "<número de comprobante o referencia, ej. 73622173>",
+            "monto": <número decimal (ej. 7466.20 o 9302.88)>,
+            "referencia": "<Número de TRACE si es factura. Si no, usa el comprobante/REF>",
             "fecha": "<fecha visible, preferiblemente YYYY-MM-DD>",
-            "banco_origen": "<Banco desde donde se hace el pago si aparece (ej. BFC o Mercantil), de lo contrario null>",
-            "banco_o_comercio": "<Para pago móvil: Banco destino. Para factura: Nombre del comercio>",
-            "beneficiario": "<Nombre de la persona o comercio destino si aparece, de lo contrario null>",
-            "telefono": "<Número de teléfono destino si es pago móvil, de lo contrario null>",
-            "identificacion": "<Cédula, RIF o documento destino si es pago móvil, de lo contrario null>",
-            "concepto": "<Concepto de la operación si está escrito, de lo contrario null>"
+            "banco_origen": "<Banco desde donde se paga si aparece, de lo contrario null>",
+            "banco_o_comercio": "<Banco destino (Pago Móvil) o Banco del Punto de Venta (Factura)>",
+            "beneficiario": "<Nombre de la persona o nombre del local/comercio>",
+            "telefono": "<Número de teléfono si es pago móvil, de lo contrario null>",
+            "identificacion": "<Cédula o RIF destino (ej. J500471122)>",
+            "concepto": "<Prioridad 1: Comentario del usuario. Prioridad 2: Concepto en la imagen. Prioridad 3: null>"
         }
         """
 
@@ -82,7 +99,7 @@ async def analizar_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📅 <b>Fecha:</b> {datos_extraidos['fecha']}"
         )
 
-        url = "http://python-loader:5000/api/bot-recibo"
+        url = "http://edc-python-loader:5000/api/bot-recibo"
         respuesta = requests.post(url, json=datos_extraidos)
         respuesta.raise_for_status()
         logging.info(f"Registro guardado en buffer: {respuesta.json()}")

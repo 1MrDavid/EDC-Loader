@@ -1,5 +1,4 @@
 import { DailyFlowChart } from "../components/charts/DailyFlowChart";
-import { Header } from "../components/layout/Header";
 import { MonthlyStats } from "../components/stats/MonthlyStats"; // Nuevo componente
 import { MovimientosTable } from "../components/tables/MovimientosTable";
 import { useDashboardData } from "../hooks/useDashboardData";
@@ -20,7 +19,6 @@ export const Dashboard = () => {
 
   return (
     <div className="bg-slate-50 min-h-screen pb-10">
-      <Header />
       <main className="max-w-7xl mx-auto p-8">
         
         {/* HEADER DE CONTROL: Título + Selector de Cuenta */}

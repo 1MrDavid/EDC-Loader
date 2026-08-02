@@ -20,6 +20,11 @@ export interface MovimientoDTO {
   referencia: string | null;
   descripcion: string;
 
+  beneficiario: string | null;
+  identificacion: string | null;
+  telefono: string | null;
+  bancoDestino: string | null;
+
   egreso: number | null;
   ingreso: number | null;
   saldo: number | null;
@@ -128,4 +133,20 @@ export interface CrearReglaDTO {
   patron: string;
   tipoPatron: string; // "DESCRIPCION", "REFERENCIA", "CUENTA"
   categoriaId: number;
+}
+
+export interface RegistroBotDTO {
+  id: number;
+  tipo: string;
+  monto: number;
+  referencia: string | null;
+  fecha: string;
+  bancoOrigen: string | null;
+  bancoDestino: string | null;
+  beneficiario: string | null;
+  telefono: string | null;
+  identificacion: string | null;
+  concepto: string | null;
+  procesado: boolean;
+  fechaCreacion: string;
 }

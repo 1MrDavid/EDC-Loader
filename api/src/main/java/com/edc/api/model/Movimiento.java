@@ -33,6 +33,18 @@ public class Movimiento {
 
     private String descripcion;
 
+    @Column(name = "beneficiario")
+    private String beneficiario;
+
+    @Column(name = "identificacion")
+    private String identificacion;
+
+    @Column(name = "telefono")
+    private String telefono;
+
+    @Column(name = "banco_destino")
+    private String bancoDestino;
+
     private Double egreso;
     private Double ingreso;
     private Double saldo;

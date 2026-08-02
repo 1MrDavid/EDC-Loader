@@ -21,6 +21,47 @@ def archivo_ya_cargado(cursor, nombre_archivo):
 def registrar_archivo_cargado(cursor, nombre_archivo):
     cursor.execute("INSERT INTO archivos_cargados (nombre_archivo) VALUES (%s)", (nombre_archivo,))
 
+def conciliar_registros_bot(cursor, cuenta_id):
+    """
+    Cruza los movimientos recién cargados en la DB con los registros pendientes
+    enviados por el Bot de Telegram y actualiza ambos.
+    """
+    consulta_conciliacion = """
+    WITH matched AS (
+        SELECT m.id AS mov_id, r.id AS bot_id
+        FROM movimientos m
+        JOIN registros_bot r ON r.procesado = false
+            -- 1. Coincidencia por Monto (Ingreso o Egreso)
+            AND (m.ingreso = r.monto OR m.egreso = r.monto)
+            -- 2. Coincidencia por Referencia difusa (Resuelve tu problema del TRACE "007760" vs "000075000007760")
+            AND (m.referencia LIKE '%' || r.referencia || '%' OR r.referencia LIKE '%' || m.referencia || '%')
+        WHERE m.cuenta_id = %s
+          AND m.beneficiario IS NULL -- Evita sobreescribir si ya se concilió manualmente
+    ),
+    update_mov AS (
+        UPDATE movimientos m
+        SET
+            beneficiario = r.beneficiario,
+            identificacion = r.identificacion,
+            telefono = r.telefono,
+            banco_destino = COALESCE(r.banco_destino, r.banco_origen),
+            -- Si tú pusiste un concepto por Telegram, pisa la descripción aburrida del banco
+            descripcion = COALESCE(r.concepto, m.descripcion)
+        FROM matched
+        JOIN registros_bot r ON r.id = matched.bot_id
+        WHERE m.id = matched.mov_id
+        RETURNING m.id
+    )
+    UPDATE registros_bot
+    SET procesado = true
+    WHERE id IN (SELECT bot_id FROM matched);
+    """
+    
+    cursor.execute(consulta_conciliacion, (cuenta_id,))
+    filas_conciliadas = cursor.rowcount
+    if filas_conciliadas > 0:
+        logging.info(f"✨ ¡Magia! Se conciliaron y enriquecieron {filas_conciliadas} movimientos automáticamente desde Telegram.")
+
 def recalcular_balance_mensual(cursor, cuenta_id):
     cursor.execute("""
     WITH movimientos_mes AS (
@@ -127,6 +168,7 @@ def ejecutar_procesamiento(banco_key, ruta_archivo, cuenta_id, nombre_original, 
         loader_func(ruta_archivo, cuenta_id, cursor, fecha_add)
         
         # 4. Tareas post-carga
+        conciliar_registros_bot(cursor, cuenta_id)
         recalcular_balance_mensual(cursor, cuenta_id)
         registrar_archivo_cargado(cursor, nombre_original)
         

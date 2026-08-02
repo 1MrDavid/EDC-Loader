@@ -11,7 +11,8 @@ import {
   type CategoriaResumenMesDTO,
   type CrearCategoriaDTO,
   type CrearReglaDTO,
-  type CategoriaDTO
+  type CategoriaDTO,
+  type RegistroBotDTO
 } from "../types/finance";
 export const obtenerCuentas = async (): Promise<CuentaDTO[]> => {
   const response = await api.get<CuentaDTO[]>("/cuentas");
@@ -140,4 +141,13 @@ export const asignarCategoriaMovimiento = async (movimientoId: number, categoria
     params: { categoriaId }
   });
   return data;
+};
+
+export const obtenerRegistrosPendientes = async (): Promise<RegistroBotDTO[]> => {
+  const response = await api.get<RegistroBotDTO[]>("/bot/pendientes");
+  return response.data;
+};
+
+export const marcarRegistroProcesado = async (id: number): Promise<void> => {
+  await api.put(`/bot/${id}/procesar`);
 };

@@ -17,6 +17,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PathVariable;
+
 
 @RestController
 @RequestMapping("/api/v1/movimientos")
@@ -66,5 +70,15 @@ public class MovimientosController {
             @RequestParam int cuentaId
     ) {
         return movimientoService.obtenerFlujoDiarioPorMes(periodo, cuentaId);
+    }
+
+    // Reemplaza tu método por este:
+    @PutMapping("/{id}/categoria")
+    public ResponseEntity<Void> asignarCategoriaMovimiento(
+            @PathVariable("id") Long id,
+            @RequestParam("categoriaId") Long categoriaId
+    ) {
+        movimientoService.asignarCategoriaMovimiento(categoriaId, id);
+        return ResponseEntity.ok().build();
     }
 }

@@ -83,4 +83,10 @@ public class MovimientoServiceImpl implements MovimientoService {
         
         log.info("Categorización masiva completada. Se actualizaron {} movimientos en total.", totalActualizados);
     }
+
+    @Override
+    @Transactional
+    public void asignarCategoriaMovimiento(Long categoriaId, Long movimientoId) {
+        repository.asignarCategoriaMovimiento(movimientoId, categoriaId);
+    }
 }

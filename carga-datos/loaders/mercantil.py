@@ -11,37 +11,43 @@ def consultaDolar(cursor):
 def procesar_mercantil(ruta_archivo, cuenta_id, cursor, fecha_add):
     logging.info(f"Iniciando procesador MERCANTIL para cuenta {cuenta_id}")
 
-    # Leer excel ignorando primeras 8 filas
-    df = pd.read_excel(
-        ruta_archivo,
-        skiprows=8
-    )
+    # 1. Obtener el último saldo registrado en la BD para continuar la secuencia
+    cursor.execute("""
+        SELECT saldo FROM movimientos 
+        WHERE cuenta_id = %s 
+        ORDER BY fechavalor DESC, id DESC LIMIT 1
+    """, (cuenta_id,))
+    resultado = cursor.fetchone()
+    Saldo = Decimal(str(resultado[0])) if resultado else Decimal("0")
 
-    # Renombrar columnas para claridad
+    # 2. Leer excel ignorando el encabezado del banco
+    df = pd.read_excel(ruta_archivo, skiprows=8)
     df.columns = ["Tipo", "Fecha", "Referencia", "Descripcion", "Monto"]
 
-    df = df.sort_values(by=["Fecha", "Referencia"])
+    # 3. Limpiar filas informativas que dañan el cálculo
+    df = df.dropna(subset=["Fecha"])
+    df = df[~df["Descripcion"].astype(str).str.upper().str.contains("SALDO INICIAL|SALDO FINAL", na=False)]
+
+    # 4. Parsear fechas a objetos reales ANTES de ordenar
+    def parse_date(x):
+        if isinstance(x, datetime):
+            return x.date()
+        try:
+            return datetime.strptime(str(x).strip(), "%d/%m/%Y").date()
+        except:
+            return None
+
+    df['FechaObj'] = df['Fecha'].apply(parse_date)
+    df = df.dropna(subset=["FechaObj"])
+
+    # 5. Ordenar cronológicamente (ahora sí usará el valor de tiempo, no texto)
+    df = df.sort_values(by=["FechaObj", "Referencia"])
 
     tasas = consultaDolar(cursor)
 
-    Saldo = None
-
     for _, fila in df.iterrows():
-
-        if pd.isna(fila["Fecha"]):
-            continue
-
-        # Fecha
-        if isinstance(fila["Fecha"], datetime):
-            FechaValor = fila["Fecha"].date()
-        else:
-            try:
-                FechaValor = datetime.strptime(str(fila["Fecha"]), "%d/%m/%Y").date()
-            except:
-                continue
-
+        FechaValor = fila["FechaObj"]
         FechaEfec = FechaValor
-
         Referencia = str(fila["Referencia"]).strip()
         Descripcion = str(fila["Descripcion"]).strip()
 
@@ -50,49 +56,28 @@ def procesar_mercantil(ruta_archivo, cuenta_id, cursor, fecha_add):
         except:
             continue
 
-        # Determinar ingreso / egreso por signo
+        # Actualización de saldo dinámico
         if monto < 0:
             Egreso = abs(monto)
             Ingreso = Decimal("0")
+            Saldo -= Egreso
         else:
             Ingreso = monto
             Egreso = Decimal("0")
-
-        descripcion_upper = Descripcion.upper().strip()
-        if descripcion_upper == "SALDO INICIAL":
-            Saldo = Ingreso  
-            continue  # no insertamos este como movimiento 
-        elif descripcion_upper == "SALDO FINAL":
-            if Saldo is not None and Saldo != Ingreso:
-                logging.warning(
-                    f"Saldo final Excel: {Ingreso} | Saldo calculado: {Saldo}"
-                )
-            continue
-        else:
-            if Saldo is not None:
-                if Ingreso > 0:
-                    Saldo += Ingreso
-                elif Egreso > 0:
-                    Saldo -= Egreso
-
-        if Saldo is None:
-            raise ValueError("No se encontró SALDO INICIAL antes de movimientos")
+            Saldo += Ingreso
 
         # Consultar tasa dólar
-        tasaDolar = None
-        
+        tasaDolar = Decimal("0")
         fecha_dolar = int(FechaValor.strftime("%Y%m%d"))
         val_usd = tasas.get(fecha_dolar)
 
         if val_usd:
             tasaDolar = Decimal(str(val_usd))
-        else:
-            tasaDolar = Decimal("0")
 
         # Conversiones
-        ingresoDolar = (Ingreso / tasaDolar) if Ingreso and tasaDolar else None
-        egresoDolar = (Egreso / tasaDolar) if Egreso and tasaDolar else None
-        saldoDolar = (Saldo / tasaDolar) if Saldo and tasaDolar else None
+        ingresoDolar = (Ingreso / tasaDolar) if Ingreso and tasaDolar > 0 else None
+        egresoDolar = (Egreso / tasaDolar) if Egreso and tasaDolar > 0 else None
+        saldoDolar = (Saldo / tasaDolar) if Saldo and tasaDolar > 0 else None
 
         # Insertar
         cursor.execute("""
@@ -104,18 +89,12 @@ def procesar_mercantil(ruta_archivo, cuenta_id, cursor, fecha_add):
                 tasadolar
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
-            cuenta_id,
-            fecha_add,
-            FechaValor,
-            FechaEfec,
-            Referencia,
-            Descripcion,
-            float(Egreso),
-            float(Ingreso),
-            Saldo,
+            cuenta_id, fecha_add, FechaValor, FechaEfec,
+            Referencia, Descripcion,
+            float(Egreso), float(Ingreso), float(Saldo),
             float(ingresoDolar) if ingresoDolar is not None else None,
             float(egresoDolar) if egresoDolar is not None else None,
-            saldoDolar,
+            float(saldoDolar) if saldoDolar is not None else None,
             float(tasaDolar)
         ))
 

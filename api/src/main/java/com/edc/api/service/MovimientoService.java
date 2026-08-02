@@ -28,4 +28,6 @@ public interface MovimientoService {
     int aplicarReglaMasiva(Categoria categoria, String patron);
     
     void aplicarTodasLasReglas();
+
+    void asignarCategoriaMovimiento(Long categoriaId, Long movimientoId);
 }

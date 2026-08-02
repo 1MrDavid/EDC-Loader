@@ -29,12 +29,17 @@ public class CategoriaServiceImpl implements CategoriaService {
         categoria.setTipo(dto.tipo().toUpperCase());
         categoria.setActiva(true); // Activa por defecto al crearse
 
+        categoria.setColor(dto.color());
+        categoria.setIcono(dto.icono());
+
         Categoria guardada = categoriaRepository.save(categoria);
 
         return new CategoriaDTO(
                 guardada.getId(),
                 guardada.getNombre(),
                 guardada.getTipo(),
+                guardada.getColor(),
+                guardada.getIcono(),
                 guardada.getActiva()
         );
     }
@@ -47,6 +52,8 @@ public class CategoriaServiceImpl implements CategoriaService {
                         categoria.getId(),
                         categoria.getNombre(),
                         categoria.getTipo(),
+                        categoria.getColor(), // Agregado
+                        categoria.getIcono(), // Agregado
                         categoria.getActiva()
                 ))
                 .collect(Collectors.toList());

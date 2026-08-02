@@ -107,3 +107,25 @@ export interface CategoriaResumenMesDTO {
   movimientosMes: number;
   montoTotalDolar: number; // El valor que viene del back
 }
+
+export interface CrearCategoriaDTO {
+  nombre: string;
+  tipo: 'INGRESO' | 'EGRESO';
+  color: string;
+  icono: string;
+}
+
+export interface CategoriaDTO {
+  id: number;
+  nombre: string;
+  tipo: 'INGRESO' | 'EGRESO';
+  color: string;
+  icono: string;
+  activa: boolean;
+}
+
+export interface CrearReglaDTO {
+  patron: string;
+  tipoPatron: string; // "DESCRIPCION", "REFERENCIA", "CUENTA"
+  categoriaId: number;
+}

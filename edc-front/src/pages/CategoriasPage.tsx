@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Header } from "../components/layout/Header";
-import { obtenerResumenCategorias, obtenerFechaMasReciente } from "../services/bankingService"; 
-import { type CategoriaResumenMesDTO } from "../types/finance";
+import { obtenerResumenCategorias, obtenerFechaMasReciente, crearCategoria } from "../services/bankingService";
+import { type CategoriaResumenMesDTO, type CrearCategoriaDTO } from "../types/finance";
 import { CategoryPolarChart } from "../components/charts/CategoryPolarChart";
+import { useMutation } from "@tanstack/react-query";
+import { AddCategoriaModal } from "../components/modals/AddCategoriaModal";
 
 export const CategoriasPage = () => {
   const [categorias, setCategorias] = useState<CategoriaResumenMesDTO[]>([]);
@@ -11,6 +13,8 @@ export const CategoriasPage = () => {
   
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   const years = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
 
@@ -52,6 +56,33 @@ export const CategoriasPage = () => {
     fetchResumen();
   }, [month, year, isInitializingDate]);
 
+  // Función para re-cargar los datos manualmente después de crear una categoría
+  const refetchCategorias = async () => {
+    try {
+      const data = await obtenerResumenCategorias(month, year);
+      setCategorias(data);
+    } catch (error) {
+      console.error("Error recargando categorías:", error);
+    }
+  };
+
+  // Mutación para crear la categoría
+  const crearCategoriaMutation = useMutation({
+    mutationFn: crearCategoria,
+    onSuccess: () => {
+      refetchCategorias(); // Refrescamos la vista actual
+      setIsModalOpen(false); // Cerramos el modal
+    },
+    onError: (error) => {
+      console.error("Error al crear categoría", error);
+      alert("Hubo un error al crear la categoría.");
+    }
+  });
+
+  const handleCrearCategoria = (data: CrearCategoriaDTO) => {
+    crearCategoriaMutation.mutate(data);
+  };
+
   return (
     <div className="bg-slate-50 min-h-screen pb-10">
       <Header />
@@ -86,7 +117,10 @@ export const CategoriasPage = () => {
               </select>
             </div>
             
-            <button className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors">
+            <button
+              onClick={() => setIsModalOpen(true)} // <--- Abrir Modal
+              className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors"
+            >
               + Nueva Categoría
             </button>
           </div>
@@ -137,6 +171,14 @@ export const CategoriasPage = () => {
           </section>
         )}
       </main>
+      
+      {/* MODAL */}
+      <AddCategoriaModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleCrearCategoria}
+        isLoading={crearCategoriaMutation.isPending}
+      />
     </div>
   );
 };

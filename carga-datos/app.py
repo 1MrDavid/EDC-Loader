@@ -4,6 +4,9 @@ import logging
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from db import get_db_connection
 from manager import ejecutar_procesamiento
+from pydantic import BaseModel
+from datetime import date
+from typing import Optional
 
 # Configurar Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -57,3 +60,35 @@ async def cargar_estado_cuenta(
         # 3. Limpieza: Borrar archivo temporal
         if os.path.exists(temp_path):
             os.remove(temp_path)
+
+class RegistroBot(BaseModel):
+    tipo: str
+    monto: float
+    referencia: Optional[str] = None
+    fecha: date
+    banco_origen: Optional[str] = None
+    banco_o_comercio: Optional[str] = None
+    beneficiario: Optional[str] = None
+    telefono: Optional[str] = None
+    identificacion: Optional[str] = None
+    concepto: Optional[str] = None
+
+@app.post("/api/bot-recibo")
+async def guardar_recibo_bot(registro: RegistroBot):
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO registros_bot
+                (tipo, monto, referencia, fecha, banco_origen, banco_destino, beneficiario, telefono, identificacion, concepto)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                registro.tipo, registro.monto, registro.referencia,
+                registro.fecha, registro.banco_origen, registro.banco_o_comercio,
+                registro.beneficiario, registro.telefono, registro.identificacion, registro.concepto
+            ))
+            conn.commit()
+            return {"status": "success", "message": "Registro guardado en buffer"}
+    except Exception as e:
+        logging.error(f"Error guardando registro del bot: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

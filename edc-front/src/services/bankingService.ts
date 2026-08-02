@@ -1,5 +1,18 @@
 import { api } from "./api";
-import { type CrearCuentaDTO, type BalanceMensualDTO, type PageResponse, type CuentaDTO, type MovimientoDTO, type FlujoDiarioDTO, type BalanceGlobalMensualDTO, type ValorDolarDTO, type CategoriaResumenMesDTO } from "../types/finance";
+import {
+  type CrearCuentaDTO,
+  type BalanceMensualDTO,
+  type PageResponse,
+  type CuentaDTO,
+  type MovimientoDTO,
+  type FlujoDiarioDTO,
+  type BalanceGlobalMensualDTO,
+  type ValorDolarDTO,
+  type CategoriaResumenMesDTO,
+  type CrearCategoriaDTO,
+  type CrearReglaDTO,
+  type CategoriaDTO
+} from "../types/finance";
 export const obtenerCuentas = async (): Promise<CuentaDTO[]> => {
   const response = await api.get<CuentaDTO[]>("/cuentas");
   return response.data;
@@ -102,4 +115,29 @@ export const obtenerResumenCategorias = async (month: number, year: number): Pro
     params: { month, year }
   });
   return response.data;
+};
+
+export const crearCategoria = async (dto: CrearCategoriaDTO) => {
+  const { data } = await api.post("/categorias", dto);
+  return data;
+};
+
+// Obtener la lista maestra de categorías para el modal
+export const obtenerTodasCategorias = async (): Promise<CategoriaDTO[]> => {
+  const { data } = await api.get<CategoriaDTO[]>("/categorias");
+  return data;
+};
+
+// Crear una regla (que además actualiza retroactivamente)
+export const crearReglaCategorizacion = async (dto: CrearReglaDTO) => {
+  const { data } = await api.post("/reglas", dto);
+  return data;
+};
+
+// Asignar categoría a un movimiento individual (sin crear regla)
+export const asignarCategoriaMovimiento = async (movimientoId: number, categoriaId: number) => {
+  const { data } = await api.put(`/movimientos/${movimientoId}/categoria`, null, {
+    params: { categoriaId }
+  });
+  return data;
 };

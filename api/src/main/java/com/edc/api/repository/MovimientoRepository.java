@@ -75,4 +75,15 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long> {
              OR LOWER(m.referencia) LIKE LOWER(CONCAT('%', :patron, '%')))
     """)
     int aplicarCategoriaRetroactiva(@Param("categoria") Categoria categoria, @Param("patron") String patron);
+
+    @Modifying
+    @Query(value = """
+        UPDATE movimientos
+        SET categoria_id = :categoriaId
+        WHERE id = :movimientoId
+    """, nativeQuery = true)
+    int asignarCategoriaMovimiento(
+            @Param("movimientoId") Long movimientoId,
+            @Param("categoriaId") Long categoriaId
+    );
 }

@@ -30,14 +30,22 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long> {
             Pageable pageable
     );
 
-    @Query("SELECT MAX(m.fechavalor) FROM Movimiento m")
+    @Query(value = """
+        SELECT MAX(fecha) FROM (
+            SELECT fechaefec AS fecha FROM movimientos
+            UNION ALL
+            SELECT fecha FROM registros_bot
+        ) AS fechas
+    """, nativeQuery = true)
     LocalDate findMaxFechaValor();
 
-    @Query("""
-        SELECT MAX(m.fechavalor)
-        FROM Movimiento m
-        WHERE m.cuentaId = :cuentaId
-    """)
+    @Query(value = """
+        SELECT MAX(fecha) FROM (
+            SELECT fechaefec AS fecha FROM movimientos WHERE (:cuentaId IS NULL OR cuenta_id = :cuentaId)
+            UNION ALL
+            SELECT fecha FROM registros_bot
+        ) AS fechas
+    """, nativeQuery = true)
     LocalDate findMaxFechaValorByCuenta(@Param("cuentaId") int cuentaId);
 
     @Query(value = """

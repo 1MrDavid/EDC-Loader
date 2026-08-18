@@ -1,5 +1,6 @@
 package com.edc.api.mapper;
 
+import com.edc.api.dto.CategoriaResumenDTO;
 import com.edc.api.dto.RegistroBotDTO;
 import com.edc.api.model.RegistroBot;
 import org.springframework.stereotype.Component;
@@ -21,7 +22,15 @@ public class RegistroBotMapper {
                 entity.getIdentificacion(),
                 entity.getConcepto(),
                 entity.getProcesado(),
-                entity.getFechaCreacion()
+                entity.getFechaCreacion(),
+                entity.getCategoria() != null ? new CategoriaResumenDTO(
+                    entity.getCategoria().getId(),
+                    entity.getCategoria().getNombre(),
+                    entity.getCategoria().getColor(),
+                    entity.getCategoria().getIcono()
+                ) : null,
+                entity.getEsIngreso(),
+                entity.getMontoDolar()
         );
     }
 }

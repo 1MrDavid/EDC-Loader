@@ -46,32 +46,46 @@ async def analizar_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         Eres un asistente financiero experto. Analiza la imagen adjunta y extrae la información en formato JSON estricto.
         No incluyas markdown ni texto extra, SOLO el JSON.
         
-        REGLAS IMPORTANTES:
-        - Para RECIBOS DE PUNTO DE VENTA (Facturas):
-          1. El número de referencia DEBE ser el que dice "TRACE" (ej. 007760). Solo si no existe TRACE, usa el que dice "REF" o "RECIBO".
-          2. El "banco_o_comercio" debe ser el Banco dueño del punto de venta (el que sale en el encabezado, ej. BANCO DE VENEZUELA, BNC, etc).
-          3. El "beneficiario" debe ser el nombre real del local/comercio (ej. INVERSIONES VENEGAS 19 12).
-          
-        - Para PAGOS MÓVILES:
-          1. Sigue las reglas normales de extracción.
-          
-        - REGLA PARA EL CONCEPTO:
-          1. Si el "COMENTARIO DEL USUARIO" tiene texto, úsalo EXACTAMENTE como concepto.
-          2. Si el "COMENTARIO DEL USUARIO" está vacío, extrae el "Concepto", "Motivo" o "Detalle" que aparezca escrito en la imagen.
-          3. Solo si no hay comentario tuyo ni concepto en la imagen, asigna null.
+        TIPOS DE OPERACIÓN PERMITIDOS:
+        - "PAGO_MOVIL": Envío de dinero por teléfono.
+        - "FACTURA": Recibo impreso de punto de venta físico.
+        - "TRANSFERENCIA": Envío a una cuenta bancaria (20 dígitos).
+        - "PAGO_SERVICIO": Pagos a SimpleTV, Corpoelec, Inter, telefonía, etc.
+        - "DEBITO_INMEDIATO": Pagos a través de pasarelas virtuales (Sypago, Netuno, etc).
+        
+        REGLAS DE EXTRACCIÓN POR TIPO:
+        1. FACTURA (Punto de Venta):
+           - "banco_destino" = Banco dueño del punto de venta (ej. BNC, Mercantil). NUNCA el nombre del local.
+           - "beneficiario" = Nombre del local o empresa (ej. INVERSIONES VENEGAS).
+           - "referencia" = Número "TRACE" (prioridad absoluta). Si no hay, usa "REF".
+        2. TRANSFERENCIA:
+           - Extrae "banco_origen" y "banco_destino". "telefono" debe ser null.
+        3. PAGO_SERVICIO y DEBITO_INMEDIATO:
+           - "beneficiario" = La empresa del servicio prestado (ej. Simple, Netuno).
+           - "banco_origen" = Banco desde donde se pagó.
+           - REGLA DE REFERENCIA: Si hay múltiples referencias (ej. Ref Sypago y Ref Banco), extrae SIEMPRE la "Ref Banco" o "Referencia del Banco" (suele ser numérica).
+           
+        REGLA GLOBAL PARA EL CONCEPTO:
+        - Prioridad 1: "COMENTARIO DEL USUARIO". Si tiene texto, úsalo EXACTAMENTE.
+        - Prioridad 2: Concepto, Motivo o Detalle escrito en la imagen.
+        - Prioridad 3: null.
+
+        REGLA GLOBAL DE FECHAS:
+        - Las fechas en los comprobantes venezolanos están en formato Día/Mes/Año (DD/MM/YYYY). Por ejemplo, 8/3/2026 significa 3 de Agosto, NO 8 de Marzo. Devuelve siempre el formato final como YYYY-MM-DD.
         
         Estructura requerida:
         {
-            "tipo": "PAGO_MOVIL" o "FACTURA",
-            "monto": <número decimal (ej. 7466.20 o 9302.88)>,
-            "referencia": "<Número de TRACE si es factura. Si no, usa el comprobante/REF>",
-            "fecha": "<fecha visible, preferiblemente YYYY-MM-DD>",
-            "banco_origen": "<Banco desde donde se paga si aparece, de lo contrario null>",
-            "banco_o_comercio": "<Banco destino (Pago Móvil) o Banco del Punto de Venta (Factura)>",
-            "beneficiario": "<Nombre de la persona o nombre del local/comercio>",
-            "telefono": "<Número de teléfono si es pago móvil, de lo contrario null>",
-            "identificacion": "<Cédula o RIF destino (ej. J500471122)>",
-            "concepto": "<Prioridad 1: Comentario del usuario. Prioridad 2: Concepto en la imagen. Prioridad 3: null>"
+            "tipo": "<UNO DE LOS TIPOS PERMITIDOS ARRIBA>",
+            "monto": <decimal (ej. 7466.20)>,
+            "es_ingreso": <booleano. false si es un pago/egreso, true si recibiste dinero>,
+            "referencia": "<Número de referencia o TRACE>",
+            "fecha": "<YYYY-MM-DD>",
+            "banco_origen": "<Banco pagador si aparece, null si no>",
+            "banco_destino": "<Banco receptor o Banco del Punto de Venta (NUNCA el comercio)>",
+            "beneficiario": "<Nombre de la persona, comercio local o empresa de servicio>",
+            "telefono": "<Teléfono destino si aplica, null si no>",
+            "identificacion": "<Cédula o RIF destino, null si no>",
+            "concepto": "<Prioridad 1: Comentario. Prioridad 2: Imagen. Prioridad 3: null>"
         }
         """
 
@@ -89,12 +103,12 @@ async def analizar_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         texto_respuesta = (
             f"✅ <b>{datos_extraidos['tipo']} Procesado</b>\n\n"
             f"💰 <b>Monto:</b> Bs. {datos_extraidos['monto']}\n"
-            f"🏦 <b>Origen:</b> {datos_extraidos.get('banco_origen', 'N/A')}\n"
-            f"🏦 <b>Destino:</b> {datos_extraidos.get('banco_o_comercio', 'N/A')}\n"
-            f"👤 <b>Beneficiario:</b> {datos_extraidos.get('beneficiario', 'N/A')}\n"
-            f"📱 <b>Teléfono:</b> {datos_extraidos.get('telefono', 'N/A')}\n"
-            f"🪪 <b>ID/RIF:</b> {datos_extraidos.get('identificacion', 'N/A')}\n"
-            f"📝 <b>Concepto:</b> {datos_extraidos.get('concepto', 'N/A')}\n"
+            f"🏦 <b>Origen:</b> {datos_extraidos.get('banco_origen') or 'N/A'}\n"
+            f"🏦 <b>Destino:</b> {datos_extraidos.get('banco_destino') or 'N/A'}\n"
+            f"👤 <b>Contraparte:</b> {datos_extraidos.get('beneficiario') or 'N/A'}\n"
+            f"📱 <b>Teléfono:</b> {datos_extraidos.get('telefono') or 'N/A'}\n"
+            f"🪪 <b>ID/RIF:</b> {datos_extraidos.get('identificacion') or 'N/A'}\n"
+            f"📝 <b>Concepto:</b> {datos_extraidos.get('concepto') or 'N/A'}\n"
             f"🔢 <b>Ref:</b> <code>{datos_extraidos['referencia']}</code>\n"
             f"📅 <b>Fecha:</b> {datos_extraidos['fecha']}"
         )

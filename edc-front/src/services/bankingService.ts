@@ -151,3 +151,8 @@ export const obtenerRegistrosPendientes = async (): Promise<RegistroBotDTO[]> =>
 export const marcarRegistroProcesado = async (id: number): Promise<void> => {
   await api.put(`/bot/${id}/procesar`);
 };
+
+export const actualizarRegistroBot = async (id: number, data: Partial<RegistroBotDTO>) => {
+  const response = await api.put<RegistroBotDTO>(`/bot/${id}`, data);
+  return response.data;
+};

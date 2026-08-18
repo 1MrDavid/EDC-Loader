@@ -12,7 +12,7 @@ BANCOS_VENEZUELA = {
     "0128": ["CARONI"],
     "0134": ["BANESCO"],
     "0138": ["PLAZA"],
-    "0151": ["FONDO COMUN", "BFC"],
+    "0151": ["FONDO COMUN", "BFC", "BANCO FONDO COMUN"],
     "0156": ["100% BANCO", "100%BANCO"],
     "0157": ["DELSUR"],
     "0163": ["TESORO"],
@@ -32,6 +32,8 @@ def estandarizar_banco(nombre_banco: str) -> str:
         return None
     
     banco_limpio = nombre_banco.upper().strip()
+
+    banco_limpio = banco_limpio.replace("Á", "A").replace("É", "E").replace("Í", "I").replace("Ó", "O").replace("Ú", "U")
     
     # 1. Si la IA ya extrajo un código de 4 dígitos exacto
     if re.match(r'^\d{4}$', banco_limpio) and banco_limpio in BANCOS_VENEZUELA:
@@ -81,18 +83,31 @@ def estandarizar_identificacion(ident: str) -> str:
 def procesar_y_guardar_registro(registro: RegistroBot, conn):
     cursor = conn.cursor()
     try:
-        # Aplicar limpieza
+        # 1. Aplicar limpieza de texto
         origen_std = estandarizar_banco(registro.banco_origen)
-        destino_std = estandarizar_banco(registro.banco_o_comercio)
+        destino_std = estandarizar_banco(registro.banco_destino)
         telefono_std = estandarizar_telefono(registro.telefono)
         ident_std = estandarizar_identificacion(registro.identificacion)
 
+        # 2. Buscar la tasa del dólar para la fecha del movimiento
+        # Pydantic entrega registro.fecha como un objeto datetime.date
+        fecha_int = int(registro.fecha.strftime('%Y%m%d'))
+        
+        cursor.execute("SELECT precio FROM valor_dolar WHERE fecha = %s", (fecha_int,))
+        row = cursor.fetchone()
+        
+        tasa_dia = float(row[0]) if row and row[0] is not None else None
+        
+        # 3. Calcular el monto en dólares (si existe la tasa)
+        monto_usd = round(registro.monto / tasa_dia, 2) if tasa_dia and tasa_dia > 0 else None
+
+        # 4. Guardar en Base de Datos incluyendo monto_dolar
         cursor.execute("""
             INSERT INTO registros_bot
-            (tipo, monto, referencia, fecha, banco_origen, banco_destino, beneficiario, telefono, identificacion, concepto)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            (tipo, monto, monto_dolar, es_ingreso, referencia, fecha, banco_origen, banco_destino, beneficiario, telefono, identificacion, concepto)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
-            registro.tipo, registro.monto, registro.referencia,
+            registro.tipo, registro.monto, monto_usd, registro.es_ingreso, registro.referencia,
             registro.fecha, origen_std, destino_std,
             registro.beneficiario, telefono_std, ident_std, registro.concepto
         ))

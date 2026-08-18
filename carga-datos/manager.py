@@ -45,8 +45,8 @@ def conciliar_registros_bot(cursor, cuenta_id):
             identificacion = r.identificacion,
             telefono = r.telefono,
             banco_destino = COALESCE(r.banco_destino, r.banco_origen),
-            -- Si tú pusiste un concepto por Telegram, pisa la descripción aburrida del banco
-            descripcion = COALESCE(r.concepto, m.descripcion)
+            descripcion = COALESCE(r.concepto, m.descripcion),
+            categoria_id = COALESCE(r.categoria_id, m.categoria_id)
         FROM matched
         JOIN registros_bot r ON r.id = matched.bot_id
         WHERE m.id = matched.mov_id

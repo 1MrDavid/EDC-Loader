@@ -6,4 +6,5 @@ import java.util.List;
 public interface RegistroBotService {
     List<RegistroBotDTO> obtenerPendientes();
     void marcarComoProcesadoManual(Long id); // Por si en el futuro quieres descartar uno desde el Front
+    RegistroBotDTO actualizarRegistro(Long id, RegistroBotDTO dto);
 }

@@ -16,5 +16,8 @@ public record RegistroBotDTO(
         String identificacion,
         String concepto,
         Boolean procesado,
-        LocalDateTime fechaCreacion
+        LocalDateTime fechaCreacion,
+        CategoriaResumenDTO categoria,
+        Boolean esIngreso,
+        Double montoDolar
 ) {}

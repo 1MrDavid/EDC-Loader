@@ -13,11 +13,13 @@ export const CategoriasPage = () => {
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
 
+  // --- NUEVO ESTADO: Toggle Ingresos / Egresos ---
+  const [filtroTipo, setFiltroTipo] = useState<'EGRESO' | 'INGRESO'>('EGRESO');
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   const years = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
 
-  // 1. Efecto de Inicialización: Buscar la fecha del último movimiento
   useEffect(() => {
     const initDate = async () => {
       try {
@@ -36,9 +38,8 @@ export const CategoriasPage = () => {
     initDate();
   }, []);
 
-  // 2. Efecto de Búsqueda: Buscar categorías cuando cambie mes/año
   useEffect(() => {
-    if (isInitializingDate) return; // Esperar a que la fecha correcta esté seteada
+    if (isInitializingDate) return; 
 
     const fetchResumen = async () => {
       setIsLoading(true);
@@ -55,7 +56,6 @@ export const CategoriasPage = () => {
     fetchResumen();
   }, [month, year, isInitializingDate]);
 
-  // Función para re-cargar los datos manualmente después de crear una categoría
   const refetchCategorias = async () => {
     try {
       const data = await obtenerResumenCategorias(month, year);
@@ -65,12 +65,11 @@ export const CategoriasPage = () => {
     }
   };
 
-  // Mutación para crear la categoría
   const crearCategoriaMutation = useMutation({
     mutationFn: crearCategoria,
     onSuccess: () => {
-      refetchCategorias(); // Refrescamos la vista actual
-      setIsModalOpen(false); // Cerramos el modal
+      refetchCategorias(); 
+      setIsModalOpen(false); 
     },
     onError: (error) => {
       console.error("Error al crear categoría", error);
@@ -82,23 +81,43 @@ export const CategoriasPage = () => {
     crearCategoriaMutation.mutate(data);
   };
 
+  // --- FILTRADO EN TIEMPO REAL ---
+  const categoriasFiltradas = categorias.filter(cat => cat.tipo === filtroTipo);
+
   return (
     <div className="bg-slate-50 min-h-screen pb-10">
       <main className="max-w-7xl mx-auto p-8">
         
         {/* HEADER CONTROLES */}
-        <div className="flex flex-col md:flex-row justify-between items-end md:items-center mb-8 gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Gestión de Categorías</h1>
             <p className="text-slate-500 text-sm">Organiza y analiza tus flujos de dinero.</p>
           </div>
           
-          <div className="flex gap-4 items-center">
+          <div className="flex flex-wrap gap-4 items-center">
+            
+            {/* TOGGLE INGRESOS / EGRESOS */}
+            <div className="flex bg-slate-200/60 p-1 rounded-lg border border-slate-200">
+              <button 
+                onClick={() => setFiltroTipo('EGRESO')}
+                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${filtroTipo === 'EGRESO' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                Egresos
+              </button>
+              <button 
+                onClick={() => setFiltroTipo('INGRESO')}
+                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${filtroTipo === 'INGRESO' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                Ingresos
+              </button>
+            </div>
+
             <div className="flex gap-2">
               <select 
                 value={month} 
                 onChange={(e) => setMonth(Number(e.target.value))}
-                className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white font-medium"
+                className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white font-medium outline-none focus:ring-2 focus:ring-slate-200"
                 disabled={isInitializingDate}
               >
                 {Array.from({length: 12}, (_, i) => (
@@ -108,7 +127,7 @@ export const CategoriasPage = () => {
               <select 
                 value={year} 
                 onChange={(e) => setYear(Number(e.target.value))}
-                className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white font-medium"
+                className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white font-medium outline-none focus:ring-2 focus:ring-slate-200"
                 disabled={isInitializingDate}
               >
                 {years.map(y => <option key={y} value={y}>{y}</option>)}
@@ -116,7 +135,7 @@ export const CategoriasPage = () => {
             </div>
             
             <button
-              onClick={() => setIsModalOpen(true)} // <--- Abrir Modal
+              onClick={() => setIsModalOpen(true)} 
               className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors"
             >
               + Nueva Categoría
@@ -130,8 +149,13 @@ export const CategoriasPage = () => {
              <div className="h-full flex items-center justify-center text-slate-400 animate-pulse">
                Generando gráfico...
              </div>
+          ) : categoriasFiltradas.length === 0 ? (
+             <div className="h-full flex flex-col items-center justify-center text-slate-400">
+               <span className="text-4xl mb-2">📊</span>
+               <p>No hay {filtroTipo.toLowerCase()}s registrados en este mes.</p>
+             </div>
           ) : (
-            <CategoryPolarChart data={categorias} />
+            <CategoryPolarChart data={categoriasFiltradas} />
           )}
         </section>
 
@@ -140,7 +164,7 @@ export const CategoriasPage = () => {
           <div className="text-center py-10 text-slate-500 animate-pulse">Cargando categorías...</div>
         ) : (
           <section className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {categorias.map(cat => (
+            {categoriasFiltradas.map(cat => (
               <div key={cat.id} className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-slate-300 transition-colors group cursor-pointer">
                 <div className="flex justify-between items-start mb-4">
                   <div 
@@ -160,7 +184,7 @@ export const CategoriasPage = () => {
                     <p className="text-xs text-slate-400 mb-0.5">Total del mes</p>
                     <p className="font-bold text-slate-700">${cat.montoTotalDolar.toFixed(2)}</p>
                   </div>
-                  <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-1 rounded-md">
+                  <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
                     {cat.movimientosMes} movs
                   </span>
                 </div>

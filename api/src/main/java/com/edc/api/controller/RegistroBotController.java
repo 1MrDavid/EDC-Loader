@@ -25,4 +25,9 @@ public class RegistroBotController {
         service.marcarComoProcesadoManual(id);
         return ResponseEntity.ok().build();
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<RegistroBotDTO> actualizarRegistro(@PathVariable Long id, @RequestBody RegistroBotDTO dto) {
+        return ResponseEntity.ok(service.actualizarRegistro(id, dto));
+    }
 }

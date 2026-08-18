@@ -45,4 +45,14 @@ public class RegistroBot {
     
     @Column(name = "fecha_creacion")
     private LocalDateTime fechaCreacion;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "categoria_id")
+    private Categoria categoria;
+
+    @Column(name = "es_ingreso")
+    private Boolean esIngreso;
+
+    @Column(name = "monto_dolar")
+    private Double montoDolar;
 }

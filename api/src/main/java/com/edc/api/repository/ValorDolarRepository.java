@@ -8,4 +8,6 @@ import java.util.List;
 public interface ValorDolarRepository extends JpaRepository<ValorDolar, Integer> {
 
     List<ValorDolar> findAllByOrderByAnoAscMesAscDiaAsc();
+
+    boolean existsByFecha(Integer fecha);
 }

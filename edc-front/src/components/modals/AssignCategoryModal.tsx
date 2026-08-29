@@ -18,8 +18,9 @@ export const AssignCategoryModal = ({ isOpen, onClose, movimiento }: Props) => {
   const [createRule, setCreateRule] = useState(false);
   
   // Estados para la regla
-  const [ruleType, setRuleType] = useState<"DESCRIPCION" | "REFERENCIA">("DESCRIPCION");
+  const [ruleType, setRuleType] = useState<"CONCEPTO" | "REFERENCIA">("CONCEPTO");
   const [rulePattern, setRulePattern] = useState("");
+  const [feedback, setFeedback] = useState<string | null>(null);
 
   // Cargar las categorías (solo si el modal está abierto)
   const { data: categorias = [], isLoading } = useQuery({
@@ -31,7 +32,7 @@ export const AssignCategoryModal = ({ isOpen, onClose, movimiento }: Props) => {
   // Pre-llenar el patrón cuando se abre el modal y se marca la regla
   useEffect(() => {
     if (movimiento) {
-      setRulePattern(ruleType === "DESCRIPCION" ? movimiento.descripcion : (movimiento.referencia || ""));
+      setRulePattern(ruleType === "CONCEPTO" ? movimiento.descripcion : (movimiento.referencia || ""));
     }
   }, [movimiento, ruleType]);
 
@@ -41,6 +42,7 @@ export const AssignCategoryModal = ({ isOpen, onClose, movimiento }: Props) => {
       setSearchTerm("");
       setSelectedCategoryId(null);
       setCreateRule(false);
+      setFeedback(null);
     }
   }, [isOpen]);
 
@@ -58,20 +60,38 @@ export const AssignCategoryModal = ({ isOpen, onClose, movimiento }: Props) => {
 
       if (createRule) {
         const dto: CrearReglaDTO = {
-          patron: rulePattern,
+          patron: rulePattern.trim(),
           tipoPatron: ruleType,
           categoriaId: selectedCategoryId,
         };
-        await crearReglaCategorizacion(dto);
+        return crearReglaCategorizacion(dto);
       } else {
         await asignarCategoriaMovimiento(movimiento.id, selectedCategoryId);
+        return null;
       }
     },
-    onSuccess: () => {
-      // Refrescar los movimientos para que se vea el cambio en la tabla
-      queryClient.invalidateQueries({ queryKey: ["movimientos"] }); 
+    onSuccess: (reglaResult) => {
+      queryClient.invalidateQueries({ queryKey: ["movimientos"] });
+      queryClient.invalidateQueries({ queryKey: ["bot-records"] });
+      queryClient.invalidateQueries({ queryKey: ["deudas"] });
+      queryClient.invalidateQueries({ queryKey: ["pagos-deuda"] });
+
+      if (reglaResult) {
+        const total = reglaResult.movimientosActualizados + reglaResult.registrosBotActualizados;
+        if (total === 0) {
+          alert(`Regla creada. Se aplicará cuando haya coincidencias con "${reglaResult.patron}".`);
+        } else {
+          alert(
+            `Regla aplicada: ${reglaResult.movimientosActualizados} movimiento(s) y ${reglaResult.registrosBotActualizados} registro(s) en vivo categorizados.`
+          );
+        }
+      }
+
       onClose();
-    }
+    },
+    onError: () => {
+      setFeedback("Hubo un error al guardar la categoría o la regla.");
+    },
   });
 
   if (!isOpen || !movimiento) return null;
@@ -163,7 +183,7 @@ export const AssignCategoryModal = ({ isOpen, onClose, movimiento }: Props) => {
                     onChange={(e) => setRuleType(e.target.value as any)}
                     className="w-full text-sm border-slate-300 rounded-md p-2 bg-white"
                   >
-                    <option value="DESCRIPCION">Descripción</option>
+                    <option value="CONCEPTO">Descripción</option>
                     <option value="REFERENCIA">Referencia</option>
                   </select>
                 </div>
@@ -180,6 +200,12 @@ export const AssignCategoryModal = ({ isOpen, onClose, movimiento }: Props) => {
               </div>
             )}
           </div>
+
+          {feedback && (
+            <div className="p-3 rounded-lg text-sm bg-rose-50 text-rose-700 border border-rose-100">
+              {feedback}
+            </div>
+          )}
 
         </div>
 

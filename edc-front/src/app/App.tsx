@@ -1,11 +1,14 @@
 import { Routes, Route } from "react-router-dom";
-import { MainLayout } from "../components/layout/MainLayout"; // Ajusta la ruta si es necesario
-import { LiveDashboard } from "../pages/LiveDashboard"; // El nuevo Home
-import { HistorialDashboard } from "../pages/HistorialDashboard"; // Tu antiguo Home
+import { MainLayout } from "../components/layout/MainLayout";
+import { LiveDashboard } from "../pages/LiveDashboard";
+import { HistorialDashboard } from "../pages/HistorialDashboard";
 import { Dashboard } from "../pages/Dashboard";
 import { CargaArchivos } from "../pages/CargaArchivos";
 import { DollarPage } from "../pages/DollarPage";
 import { CategoriasPage } from "../pages/CategoriasPage";
+import { DeudasPage } from "../pages/DeudasPage";
+import { AhorrosLimitesPage } from "../pages/AhorrosLimitesPage";
+import { CuentasAhorroPage } from "../pages/CuentasAhorroPage";
 
 function App() {
   return (
@@ -30,6 +33,10 @@ function App() {
         <Route path="/divisas" element={<DollarPage />} />
         <Route path="/categorias" element={<CategoriasPage />} />
         
+        <Route path="/deudas" element={<DeudasPage />} />
+
+        <Route path="/ahorros-limites" element={<AhorrosLimitesPage />} />
+        <Route path="/cuentas-ahorro" element={<CuentasAhorroPage />} />
       </Route>
     </Routes>
   );

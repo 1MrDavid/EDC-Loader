@@ -80,6 +80,117 @@ def estandarizar_identificacion(ident: str) -> str:
     ident_limpia = ident.upper().replace("-", "").replace(".", "").replace(" ", "")
     return ident_limpia
 
+def normalizar_tipo_patron(tipo: str) -> str:
+    if not tipo:
+        return "CONCEPTO"
+    tipo = tipo.upper()
+    if tipo in ("DESCRIPCION", "CONCEPTO"):
+        return "CONCEPTO"
+    if tipo == "BENEFICIARIO":
+        return "BENEFICIARIO"
+    if tipo == "REFERENCIA":
+        return "REFERENCIA"
+    return "CONCEPTO"
+
+
+def _columna_por_tipo(tipo: str) -> str:
+    if tipo == "BENEFICIARIO":
+        return "beneficiario"
+    if tipo == "REFERENCIA":
+        return "referencia"
+    return "concepto"
+
+
+def _calcular_periodo(frecuencia: str, fecha):
+    from datetime import timedelta
+    if frecuencia == "MENSUAL":
+        inicio = fecha.replace(day=1)
+        if fecha.month == 12:
+            fin = fecha.replace(day=31)
+        else:
+            fin = fecha.replace(month=fecha.month + 1, day=1) - timedelta(days=1)
+        return inicio, fin
+    if frecuencia == "SEMANAL":
+        inicio = fecha - timedelta(days=fecha.weekday())
+        fin = inicio + timedelta(days=6)
+        return inicio, fin
+    return fecha, fecha
+
+
+def intentar_auto_match_deuda(cursor, registro_id: int, categoria_id: int, monto: float,
+                               monto_usd, fecha, es_ingreso: bool):
+    if es_ingreso or not categoria_id:
+        return
+
+    cursor.execute(
+        """
+        SELECT 1 FROM pagos_deuda WHERE registro_bot_id = %s
+        """,
+        (registro_id,),
+    )
+    if cursor.fetchone():
+        return
+
+    cursor.execute(
+        """
+        SELECT id, frecuencia, tipo_deuda FROM deudas
+        WHERE activa = true AND categoria_id = %s
+        LIMIT 1
+        """,
+        (categoria_id,),
+    )
+    deuda = cursor.fetchone()
+    if not deuda:
+        return
+
+    deuda_id, frecuencia, tipo_deuda = deuda
+    inicio, fin = _calcular_periodo(frecuencia.upper(), fecha)
+
+    if frecuencia.upper() != "DEFINIDA":
+        cursor.execute(
+            """
+            SELECT 1 FROM pagos_deuda
+            WHERE deuda_id = %s AND fecha_pago BETWEEN %s AND %s
+            """,
+            (deuda_id, inicio, fin),
+        )
+        if cursor.fetchone():
+            return
+
+    cursor.execute(
+        """
+        INSERT INTO pagos_deuda (deuda_id, monto_pagado_bs, monto_pagado_usd, fecha_pago, registro_bot_id, origen)
+        VALUES (%s, %s, %s, %s, %s, 'AUTO')
+        """,
+        (deuda_id, monto, monto_usd, fecha, registro_id),
+    )
+
+    if frecuencia.upper() == "UNA_VEZ":
+        cursor.execute("UPDATE deudas SET activa = false WHERE id = %s", (deuda_id,))
+
+
+def aplicar_reglas_a_registro(cursor, registro_id: int):
+    cursor.execute(
+        "SELECT patron, tipo_patron, categoria_id FROM reglas_categorizacion WHERE activa = true"
+    )
+    reglas = cursor.fetchall()
+
+    for patron, tipo_patron, categoria_id in reglas:
+        tipo = normalizar_tipo_patron(tipo_patron)
+        columna = _columna_por_tipo(tipo)
+        cursor.execute(
+            f"""
+            UPDATE registros_bot
+            SET categoria_id = %s
+            WHERE id = %s
+              AND categoria_id IS NULL
+              AND procesado = false
+              AND LOWER({columna}) LIKE LOWER(%s)
+            """,
+            (categoria_id, registro_id, f"%{patron}%"),
+        )
+
+
 def procesar_y_guardar_registro(registro: RegistroBot, conn):
     cursor = conn.cursor()
     try:
@@ -106,10 +217,24 @@ def procesar_y_guardar_registro(registro: RegistroBot, conn):
             INSERT INTO registros_bot
             (tipo, monto, monto_dolar, es_ingreso, referencia, fecha, banco_origen, banco_destino, beneficiario, telefono, identificacion, concepto)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
         """, (
             registro.tipo, registro.monto, monto_usd, registro.es_ingreso, registro.referencia,
             registro.fecha, origen_std, destino_std,
             registro.beneficiario, telefono_std, ident_std, registro.concepto
         ))
+        registro_id = cursor.fetchone()[0]
+
+        # 5. Aplicar reglas de categorización automática
+        aplicar_reglas_a_registro(cursor, registro_id)
+
+        # 6. Auto-match de deuda por categoría
+        cursor.execute(
+            "SELECT categoria_id, monto, monto_dolar, fecha, es_ingreso FROM registros_bot WHERE id = %s",
+            (registro_id,),
+        )
+        row = cursor.fetchone()
+        if row and row[0]:
+            intentar_auto_match_deuda(cursor, registro_id, row[0], row[1], row[2], row[3], row[4])
     finally:
         cursor.close()

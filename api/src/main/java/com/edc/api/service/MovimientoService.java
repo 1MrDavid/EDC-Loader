@@ -25,7 +25,7 @@ public interface MovimientoService {
 
     List<FlujoDiarioDTO> obtenerFlujoDiarioPorMes(LocalDate periodo, int cuentaId);
 
-    int aplicarReglaMasiva(Categoria categoria, String patron);
+    int aplicarReglaMasiva(Categoria categoria, String patron, String tipoPatron);
     
     void aplicarTodasLasReglas();
 

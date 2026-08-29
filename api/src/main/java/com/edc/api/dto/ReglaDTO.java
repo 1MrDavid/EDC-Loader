@@ -5,6 +5,8 @@ public record ReglaDTO(
         String patron,
         String tipoPatron,
         Long categoriaId,
-        Boolean activa
+        Boolean activa,
+        int movimientosActualizados,
+        int registrosBotActualizados
 ) {
 }

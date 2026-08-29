@@ -12,7 +12,24 @@ import {
   type CrearCategoriaDTO,
   type CrearReglaDTO,
   type CategoriaDTO,
-  type RegistroBotDTO
+  type RegistroBotDTO,
+  type ReglaDTO,
+  type DeudaDTO,
+  type CrearDeudaDTO,
+  type ActualizarDeudaDTO,
+  type RegistrarPagoDeudaDTO,
+  type PagoDeudaDTO,
+  type MetaAhorroDTO,
+  type CrearMetaDTO,
+  type ActualizarMetaDTO,
+  type LimiteCategoriaDTO,
+  type CrearLimiteDTO,
+  type ActualizarLimiteDTO,
+  type CuentaAhorroDTO,
+  type CrearCuentaAhorroDTO,
+  type ActualizarCuentaAhorroDTO,
+  type MovimientoAhorroDTO,
+  type CrearMovimientoAhorroDTO
 } from "../types/finance";
 export const obtenerCuentas = async (): Promise<CuentaDTO[]> => {
   const response = await api.get<CuentaDTO[]>("/cuentas");
@@ -129,9 +146,9 @@ export const obtenerTodasCategorias = async (): Promise<CategoriaDTO[]> => {
   return data;
 };
 
-// Crear una regla (que además actualiza retroactivamente)
-export const crearReglaCategorizacion = async (dto: CrearReglaDTO) => {
-  const { data } = await api.post("/reglas", dto);
+// Crear una regla (que además actualiza retroactivamente movimientos y registros bot)
+export const crearReglaCategorizacion = async (dto: CrearReglaDTO): Promise<ReglaDTO> => {
+  const { data } = await api.post<ReglaDTO>("/reglas", dto);
   return data;
 };
 
@@ -155,4 +172,121 @@ export const marcarRegistroProcesado = async (id: number): Promise<void> => {
 export const actualizarRegistroBot = async (id: number, data: Partial<RegistroBotDTO>) => {
   const response = await api.put<RegistroBotDTO>(`/bot/${id}`, data);
   return response.data;
+};
+
+export const obtenerDeudasActivas = async (month?: number, year?: number): Promise<DeudaDTO[]> => {
+  const { data } = await api.get<DeudaDTO[]>("/deudas", { params: { month, year } });
+  return data;
+};
+
+export const crearDeuda = async (dto: CrearDeudaDTO): Promise<DeudaDTO> => {
+  const { data } = await api.post<DeudaDTO>("/deudas", dto);
+  return data;
+};
+
+export const actualizarDeuda = async (id: number, dto: ActualizarDeudaDTO): Promise<DeudaDTO> => {
+  const { data } = await api.put<DeudaDTO>(`/deudas/${id}`, dto);
+  return data;
+};
+
+export const obtenerPagosDeuda = async (month: number, year: number): Promise<PagoDeudaDTO[]> => {
+  const { data } = await api.get<PagoDeudaDTO[]>("/pagos-deuda", { params: { month, year } });
+  return data;
+};
+
+export const registrarPagoDeuda = async (dto: RegistrarPagoDeudaDTO): Promise<PagoDeudaDTO> => {
+  const { data } = await api.post<PagoDeudaDTO>("/pagos-deuda", dto);
+  return data;
+};
+
+export const eliminarPagoDeuda = async (id: number): Promise<void> => {
+  await api.delete(`/pagos-deuda/${id}`);
+};
+
+export const obtenerMetas = async (): Promise<MetaAhorroDTO[]> => {
+  const { data } = await api.get<MetaAhorroDTO[]>("/metas-ahorro");
+  return data;
+};
+
+export const crearMeta = async (dto: CrearMetaDTO): Promise<MetaAhorroDTO> => {
+  const { data } = await api.post<MetaAhorroDTO>("/metas-ahorro", dto);
+  return data;
+};
+
+export const actualizarMeta = async (id: number, dto: ActualizarMetaDTO): Promise<MetaAhorroDTO> => {
+  const { data } = await api.put<MetaAhorroDTO>(`/metas-ahorro/${id}`, dto);
+  return data;
+};
+
+export const eliminarMeta = async (id: number): Promise<void> => {
+  await api.delete(`/metas-ahorro/${id}`);
+};
+
+export const obtenerLimites = async (month: number, year: number): Promise<LimiteCategoriaDTO[]> => {
+  const { data } = await api.get<LimiteCategoriaDTO[]>("/limites-categoria", {
+    params: { month, year },
+  });
+  return data;
+};
+
+export const crearLimite = async (dto: CrearLimiteDTO): Promise<LimiteCategoriaDTO> => {
+  const { data } = await api.post<LimiteCategoriaDTO>("/limites-categoria", dto);
+  return data;
+};
+
+export const actualizarLimite = async (
+  id: number,
+  dto: ActualizarLimiteDTO
+): Promise<LimiteCategoriaDTO> => {
+  const { data } = await api.put<LimiteCategoriaDTO>(`/limites-categoria/${id}`, dto);
+  return data;
+};
+
+export const eliminarLimite = async (id: number): Promise<void> => {
+  await api.delete(`/limites-categoria/${id}`);
+};
+
+export const obtenerCuentasAhorro = async (): Promise<CuentaAhorroDTO[]> => {
+  const { data } = await api.get<CuentaAhorroDTO[]>("/cuentas-ahorro");
+  return data;
+};
+
+export const obtenerCuentaAhorro = async (id: number): Promise<CuentaAhorroDTO> => {
+  const { data } = await api.get<CuentaAhorroDTO>(`/cuentas-ahorro/${id}`);
+  return data;
+};
+
+export const crearCuentaAhorro = async (dto: CrearCuentaAhorroDTO): Promise<CuentaAhorroDTO> => {
+  const { data } = await api.post<CuentaAhorroDTO>("/cuentas-ahorro", dto);
+  return data;
+};
+
+export const actualizarCuentaAhorro = async (
+  id: number,
+  dto: ActualizarCuentaAhorroDTO
+): Promise<CuentaAhorroDTO> => {
+  const { data } = await api.put<CuentaAhorroDTO>(`/cuentas-ahorro/${id}`, dto);
+  return data;
+};
+
+export const eliminarCuentaAhorro = async (id: number): Promise<void> => {
+  await api.delete(`/cuentas-ahorro/${id}`);
+};
+
+export const obtenerMovimientosAhorro = async (cuentaAhorroId: number): Promise<MovimientoAhorroDTO[]> => {
+  const { data } = await api.get<MovimientoAhorroDTO[]>("/movimientos-ahorro", {
+    params: { cuentaAhorroId },
+  });
+  return data;
+};
+
+export const registrarMovimientoAhorro = async (
+  dto: CrearMovimientoAhorroDTO
+): Promise<MovimientoAhorroDTO> => {
+  const { data } = await api.post<MovimientoAhorroDTO>("/movimientos-ahorro", dto);
+  return data;
+};
+
+export const eliminarMovimientoAhorro = async (id: number): Promise<void> => {
+  await api.delete(`/movimientos-ahorro/${id}`);
 };

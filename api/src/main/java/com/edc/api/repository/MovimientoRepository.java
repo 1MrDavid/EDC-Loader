@@ -79,10 +79,27 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long> {
         UPDATE Movimiento m
         SET m.categoria = :categoria
         WHERE m.categoria IS NULL
-        AND (LOWER(m.descripcion) LIKE LOWER(CONCAT('%', :patron, '%'))
-             OR LOWER(m.referencia) LIKE LOWER(CONCAT('%', :patron, '%')))
+        AND LOWER(m.descripcion) LIKE LOWER(CONCAT('%', :patron, '%'))
     """)
-    int aplicarCategoriaRetroactiva(@Param("categoria") Categoria categoria, @Param("patron") String patron);
+    int aplicarReglaPorDescripcion(@Param("categoria") Categoria categoria, @Param("patron") String patron);
+
+    @Modifying
+    @Query("""
+        UPDATE Movimiento m
+        SET m.categoria = :categoria
+        WHERE m.categoria IS NULL
+        AND LOWER(m.beneficiario) LIKE LOWER(CONCAT('%', :patron, '%'))
+    """)
+    int aplicarReglaPorBeneficiario(@Param("categoria") Categoria categoria, @Param("patron") String patron);
+
+    @Modifying
+    @Query("""
+        UPDATE Movimiento m
+        SET m.categoria = :categoria
+        WHERE m.categoria IS NULL
+        AND LOWER(m.referencia) LIKE LOWER(CONCAT('%', :patron, '%'))
+    """)
+    int aplicarReglaPorReferencia(@Param("categoria") Categoria categoria, @Param("patron") String patron);
 
     @Modifying
     @Query(value = """

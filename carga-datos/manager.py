@@ -50,7 +50,15 @@ def conciliar_registros_bot(cursor, cuenta_id):
         FROM matched
         JOIN registros_bot r ON r.id = matched.bot_id
         WHERE m.id = matched.mov_id
-        RETURNING m.id
+        RETURNING m.id, matched.bot_id AS bot_id
+    ),
+    link_pagos AS (
+        UPDATE pagos_deuda p
+        SET movimiento_id = um.id
+        FROM update_mov um
+        WHERE p.registro_bot_id = um.bot_id
+          AND p.movimiento_id IS NULL
+        RETURNING p.id
     )
     UPDATE registros_bot
     SET procesado = true

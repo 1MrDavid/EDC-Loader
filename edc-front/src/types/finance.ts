@@ -131,8 +131,18 @@ export interface CategoriaDTO {
 
 export interface CrearReglaDTO {
   patron: string;
-  tipoPatron: string; // "DESCRIPCION", "REFERENCIA", "CUENTA"
+  tipoPatron: "CONCEPTO" | "BENEFICIARIO" | "REFERENCIA" | "DESCRIPCION";
   categoriaId: number;
+}
+
+export interface ReglaDTO {
+  id: number;
+  patron: string;
+  tipoPatron: string;
+  categoriaId: number;
+  activa: boolean;
+  movimientosActualizados: number;
+  registrosBotActualizados: number;
 }
 
 export interface RegistroBotDTO {
@@ -149,4 +159,175 @@ export interface RegistroBotDTO {
   concepto: string | null;
   procesado: boolean;
   fechaCreacion: string;
+  categoria: CategoriaResumenDTO | null;
+  esIngreso: boolean;
+  montoDolar: number | null;
+  pagoDeudaId: number | null;
+  deudaId: number | null;
+  deudaNombre: string | null;
+}
+
+export interface CrearDeudaDTO {
+  nombre: string;
+  tipoDeuda: 'CICLICA' | 'DEFINIDA';
+  frecuencia: string;
+  montoBs?: number | null;
+  montoUsd?: number | null;
+  montoEur?: number | null;
+  categoriaId?: number | null;
+  crearCategoriaDedicada?: boolean;
+  fechaInicio: string;
+  fechaFin?: string | null;
+  color: string;
+  icono: string;
+  cuotasTotales?: number | null;
+}
+
+export interface ActualizarDeudaDTO extends CrearDeudaDTO {
+  activa: boolean;
+}
+
+export interface DeudaDTO {
+  id: number;
+  nombre: string;
+  tipoDeuda: 'CICLICA' | 'DEFINIDA';
+  frecuencia: string;
+  montoBs: number | null;
+  montoUsd: number | null;
+  montoEur: number | null;
+  montoEquivalenteBs: number;
+  montoEquivalenteUsd: number;
+  pagadoEstePeriodo: boolean;
+  categoria: CategoriaResumenDTO | null;
+  fechaInicio: string;
+  fechaFin: string | null;
+  activa: boolean;
+  color: string;
+  icono: string;
+  cuotasTotales: number | null;
+  cuotasPagadas: number;
+  montoAbonadoBs: number;
+  montoAbonadoUsd: number;
+}
+
+export interface PagoDeudaDTO {
+  id: number;
+  montoPagadoBs: number | null;
+  montoPagadoUsd: number | null;
+  fechaPago: string;
+  deudaNombre: string | null;
+  deudaIcono: string | null;
+  deudaColor: string | null;
+  categoria: CategoriaResumenDTO | null;
+  deudaId: number | null;
+  registroBotId: number | null;
+  movimientoId: number | null;
+  origen: string | null;
+}
+
+export interface RegistrarPagoDeudaDTO {
+  deudaId: number;
+  registroBotId?: number | null;
+  movimientoId?: number | null;
+  fechaPago: string;
+  montoPagadoBs?: number | null;
+  montoPagadoUsd?: number | null;
+  origen?: 'AUTO' | 'MANUAL';
+}
+
+export interface MetaAhorroDTO {
+  id: number;
+  nombre: string;
+  cuentaAhorroId: number;
+  cuentaAhorroNombre: string | null;
+  montoObjetivoUsd: number;
+  fechaLimite: string | null;
+  activa: boolean;
+  saldoActualUsd: number;
+  porcentajeAvance: number;
+  mesesEstimadosRestantes: number;
+}
+
+export interface CrearMetaDTO {
+  nombre: string;
+  cuentaAhorroId: number;
+  montoObjetivoUsd: number;
+  fechaLimite?: string | null;
+}
+
+export interface ActualizarMetaDTO extends CrearMetaDTO {
+  activa: boolean;
+}
+
+export type LimiteEstado = 'SAFE' | 'WARNING' | 'DANGER';
+
+export interface LimiteCategoriaDTO {
+  id: number;
+  categoriaId: number;
+  categoriaNombre: string;
+  categoriaColor: string;
+  categoriaIcono: string;
+  limiteUsd: number;
+  gastadoUsd: number;
+  porcentajeConsumo: number;
+  estado: LimiteEstado;
+  mes: number | null;
+  ano: number | null;
+  global: boolean;
+}
+
+export interface CrearLimiteDTO {
+  categoriaId: number;
+  montoUsd: number;
+  mes?: number | null;
+  ano?: number | null;
+}
+
+export interface ActualizarLimiteDTO extends CrearLimiteDTO {
+  activa: boolean;
+}
+
+export interface CuentaAhorroDTO {
+  id: number;
+  nombre: string;
+  tipoMoneda: string;
+  saldoActual: number;
+  saldoEquivalenteBs: number;
+  saldoEquivalenteUsd: number;
+  color: string;
+  icono: string;
+}
+
+export interface CrearCuentaAhorroDTO {
+  nombre: string;
+  tipoMoneda: string;
+  saldoInicial?: number | null;
+  color: string;
+  icono: string;
+}
+
+export interface ActualizarCuentaAhorroDTO {
+  nombre: string;
+  tipoMoneda: string;
+  color: string;
+  icono: string;
+}
+
+export interface MovimientoAhorroDTO {
+  id: number;
+  cuentaAhorroId: number;
+  tipoOperacion: 'INGRESO' | 'EGRESO';
+  monto: number;
+  descripcion: string | null;
+  fecha: string;
+  movimientoId: number | null;
+  registroBotId: number | null;
+}
+
+export interface CrearMovimientoAhorroDTO {
+  cuentaAhorroId: number;
+  tipoOperacion: 'INGRESO' | 'EGRESO';
+  monto: number;
+  descripcion?: string | null;
+  fecha: string;
 }

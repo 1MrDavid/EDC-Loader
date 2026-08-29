@@ -223,9 +223,14 @@ export const LiveDashboard = () => {
                     {r.categoria ? (
                        <CategoryBadge categoria={r.categoria} />
                     ) : (
-                      <button onClick={() => setSelectedRecord(r)} className="text-xs font-medium text-slate-400 border border-dashed border-slate-300 rounded-full px-3 py-1 hover:bg-slate-50 hover:text-blue-500 hover:border-blue-300 transition">
+                      <button onClick={() => setSelectedRecord(r)} className="text-xs font-medium text-slate-400 border border-dashed border-slate-300 rounded-full px-3 py-1 hover:bg-slate-50 hover:text-blue-500 hover:border-blue-300 transition cursor-pointer">
                         + Categoría
                       </button>
+                    )}
+                    {r.deudaNombre && (
+                      <span className="block mt-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full w-fit">
+                        ✓ {r.deudaNombre}
+                      </span>
                     )}
                   </td>
                   <td className="px-6 py-4 text-right whitespace-nowrap">

@@ -19,5 +19,8 @@ public record RegistroBotDTO(
         LocalDateTime fechaCreacion,
         CategoriaResumenDTO categoria,
         Boolean esIngreso,
-        Double montoDolar
+        Double montoDolar,
+        Long pagoDeudaId,
+        Long deudaId,
+        String deudaNombre
 ) {}

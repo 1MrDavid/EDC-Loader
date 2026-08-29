@@ -1,6 +1,7 @@
 package com.edc.api.mapper;
 
 import com.edc.api.dto.CategoriaResumenDTO;
+import com.edc.api.dto.PagoDeudaDTO;
 import com.edc.api.dto.RegistroBotDTO;
 import com.edc.api.model.RegistroBot;
 import org.springframework.stereotype.Component;
@@ -9,6 +10,10 @@ import org.springframework.stereotype.Component;
 public class RegistroBotMapper {
 
     public RegistroBotDTO toDto(RegistroBot entity) {
+        return toDto(entity, null);
+    }
+
+    public RegistroBotDTO toDto(RegistroBot entity, PagoDeudaDTO pago) {
         return new RegistroBotDTO(
                 entity.getId(),
                 entity.getTipo(),
@@ -30,7 +35,10 @@ public class RegistroBotMapper {
                     entity.getCategoria().getIcono()
                 ) : null,
                 entity.getEsIngreso(),
-                entity.getMontoDolar()
+                entity.getMontoDolar(),
+                pago != null ? pago.id() : null,
+                pago != null ? pago.deudaId() : null,
+                pago != null ? pago.deudaNombre() : null
         );
     }
 }

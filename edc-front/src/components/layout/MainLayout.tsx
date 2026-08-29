@@ -9,6 +9,9 @@ export const MainLayout = () => {
     { path: "/cargar", label: "Cargar Archivos", icon: "📁" },
     { path: "/divisas", label: "Valor Dolar", icon: "💵" },
     { path: "/categorias", label: "Categorías", icon: "🏷️" },
+    { path: "/deudas", label: "Deudas", icon: "💳" },
+    { path: "/cuentas-ahorro", label: "Billeteras", icon: "🏦" },
+    { path: "/ahorros-limites", label: "Ahorros y Límites", icon: "💰" },
   ];
 
   return (

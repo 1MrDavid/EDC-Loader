@@ -1,13 +1,29 @@
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useBotRecords } from "../hooks/useBotRecords";
+import { forzarConciliacionBot } from "../services/bankingService";
 import { EditBotModal } from "../components/modals/EditBotModal";
 import { CategoryBadge } from "../components/cards/CategoryBadge";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { type RegistroBotDTO } from "../types/finance";
 
 export const LiveDashboard = () => {
+  const queryClient = useQueryClient();
   const { records, isLoading, isError } = useBotRecords();
   const [selectedRecord, setSelectedRecord] = useState<RegistroBotDTO | null>(null);
+
+  const conciliacionMutation = useMutation({
+    mutationFn: forzarConciliacionBot,
+    onSuccess: (data) => {
+      alert(`Se conciliaron ${data.conciliados} registro(s).`);
+      queryClient.invalidateQueries({ queryKey: ["bot-records"] });
+      queryClient.invalidateQueries({ queryKey: ["registros-bot"] });
+      queryClient.invalidateQueries({ queryKey: ["movimientos"] });
+    },
+    onError: () => {
+      alert("Error al ejecutar la conciliación.");
+    },
+  });
   
   const [currency, setCurrency] = useState<'BS' | 'USD'>('BS');
 
@@ -186,6 +202,19 @@ export const LiveDashboard = () => {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <h2 className="text-sm font-bold text-slate-800">Registros Pendientes del Bot</h2>
+            <p className="text-xs text-slate-500">Cruza movimientos bancarios con registros de Telegram.</p>
+          </div>
+          <button
+            onClick={() => conciliacionMutation.mutate()}
+            disabled={conciliacionMutation.isPending}
+            className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-colors cursor-pointer shrink-0"
+          >
+            {conciliacionMutation.isPending ? "⏳ Conciliando..." : "🔄 Forzar Conciliación"}
+          </button>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs uppercase font-semibold">

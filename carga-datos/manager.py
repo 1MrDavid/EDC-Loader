@@ -3,15 +3,17 @@ import os
 from datetime import date
 from loaders.bfc import procesar_bfc
 from loaders.mercantil import procesar_mercantil
+from loaders.bancamiga import procesar_bancamiga
+from loaders.n58 import procesar_n58
 
 # ==========================================
 # MAPA DE BANCOS (FACTORY)
-# Aquí registrarás tus futuros bancos
 # ==========================================
 BANK_LOADERS = {
     "BFC": procesar_bfc,
     "MERCANTIL": procesar_mercantil,
-    # "BANESCO": procesar_banesco       <-- Futuro
+    "BANCAMIGA": procesar_bancamiga,
+    "N58": procesar_n58
 }
 
 def archivo_ya_cargado(cursor, nombre_archivo):
@@ -33,8 +35,22 @@ def conciliar_registros_bot(cursor, cuenta_id):
         JOIN registros_bot r ON r.procesado = false
             -- 1. Coincidencia por Monto (Ingreso o Egreso)
             AND (m.ingreso = r.monto OR m.egreso = r.monto)
-            -- 2. Coincidencia por Referencia difusa (Resuelve tu problema del TRACE "007760" vs "000075000007760")
-            AND (m.referencia LIKE '%' || r.referencia || '%' OR r.referencia LIKE '%' || m.referencia || '%')
+            -- 2. Coincidencia por Referencia (Full, Difusa o por Cola)
+            AND (
+                -- Caso A: Coincidencia difusa (el que ya tenías)
+                (r.referencia IS NOT NULL AND (
+                    m.referencia LIKE '%%' || r.referencia || '%%' OR
+                    r.referencia LIKE '%%' || m.referencia || '%%'
+                ))
+                OR
+                -- Caso B: Coincidencia por la "cola" (Últimos 6 dígitos ignorando los prefijos de Mercantil/BFC)
+                (r.referencia IS NOT NULL AND LENGTH(r.referencia) >= 6 AND LENGTH(m.referencia) >= 6 AND
+                 RIGHT(m.referencia, 6) = RIGHT(r.referencia, 6)
+                )
+                OR
+                -- Caso C: Sin referencia, cruza por fecha
+                (r.referencia IS NULL AND m.fechavalor = r.fecha::date)
+            )
         WHERE m.cuenta_id = %s
           AND m.beneficiario IS NULL -- Evita sobreescribir si ya se concilió manualmente
     ),

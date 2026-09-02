@@ -11,6 +11,7 @@ import com.edc.api.service.PagoDeudaService;
 import com.edc.api.service.RegistroBotService;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,6 +24,7 @@ public class RegistroBotServiceImpl implements RegistroBotService {
     private final RegistroBotMapper mapper;
     private final CategoriaRepository categoriaRepository;
     private final PagoDeudaService pagoDeudaService;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     public List<RegistroBotDTO> obtenerPendientes() {
@@ -90,6 +92,56 @@ public class RegistroBotServiceImpl implements RegistroBotService {
         }
 
         return toDtoConPago(guardado);
+    }
+
+    @Override
+    @Transactional
+    public int forzarConciliacionGlobal() {
+        String sql = """
+            WITH matched AS (
+                SELECT m.id AS mov_id, r.id AS bot_id
+                FROM movimientos m
+                JOIN registros_bot r ON r.procesado = false
+                    AND (m.ingreso = r.monto OR m.egreso = r.monto)
+                    AND (
+                        (r.referencia IS NOT NULL AND (
+                            m.referencia LIKE '%' || r.referencia || '%' OR
+                            r.referencia LIKE '%' || m.referencia || '%'
+                        ))
+                        OR
+                        (r.referencia IS NOT NULL AND LENGTH(r.referencia) >= 6 AND LENGTH(m.referencia) >= 6 AND
+                         RIGHT(m.referencia, 6) = RIGHT(r.referencia, 6))
+                        OR
+                        (r.referencia IS NULL AND m.fechavalor = r.fecha::date)
+                    )
+                WHERE m.beneficiario IS NULL
+            ),
+            update_mov AS (
+                UPDATE movimientos m
+                SET
+                    beneficiario = r.beneficiario,
+                    identificacion = r.identificacion,
+                    telefono = r.telefono,
+                    banco_destino = COALESCE(r.banco_destino, r.banco_origen),
+                    descripcion = COALESCE(r.concepto, m.descripcion),
+                    categoria_id = COALESCE(r.categoria_id, m.categoria_id)
+                FROM matched
+                JOIN registros_bot r ON r.id = matched.bot_id
+                WHERE m.id = matched.mov_id
+                RETURNING m.id, matched.bot_id AS bot_id
+            ),
+            link_pagos AS (
+                UPDATE pagos_deuda p
+                SET movimiento_id = um.id
+                FROM update_mov um
+                WHERE p.registro_bot_id = um.bot_id
+                  AND p.movimiento_id IS NULL
+            )
+            UPDATE registros_bot
+            SET procesado = true
+            WHERE id IN (SELECT bot_id FROM matched)
+            """;
+        return jdbcTemplate.update(sql);
     }
 
     private RegistroBotDTO toDtoConPago(RegistroBot entity) {

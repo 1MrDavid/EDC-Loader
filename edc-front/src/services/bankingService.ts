@@ -174,6 +174,11 @@ export const actualizarRegistroBot = async (id: number, data: Partial<RegistroBo
   return response.data;
 };
 
+export const forzarConciliacionBot = async (): Promise<{ mensaje: string; conciliados: number }> => {
+  const { data } = await api.post<{ mensaje: string; conciliados: number }>("/bot/conciliar");
+  return data;
+};
+
 export const obtenerDeudasActivas = async (month?: number, year?: number): Promise<DeudaDTO[]> => {
   const { data } = await api.get<DeudaDTO[]>("/deudas", { params: { month, year } });
   return data;

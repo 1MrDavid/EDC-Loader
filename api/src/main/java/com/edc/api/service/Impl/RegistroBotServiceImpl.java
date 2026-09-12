@@ -1,5 +1,6 @@
 package com.edc.api.service.Impl;
 
+import com.edc.api.dto.CrearRegistroBotDTO;
 import com.edc.api.dto.PagoDeudaDTO;
 import com.edc.api.dto.RegistroBotDTO;
 import com.edc.api.mapper.RegistroBotMapper;
@@ -9,11 +10,16 @@ import com.edc.api.repository.CategoriaRepository;
 import com.edc.api.repository.RegistroBotRepository;
 import com.edc.api.service.PagoDeudaService;
 import com.edc.api.service.RegistroBotService;
-import jakarta.transaction.Transactional;
+import com.edc.api.service.ValorDolarSyncService;
 import lombok.AllArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -25,6 +31,7 @@ public class RegistroBotServiceImpl implements RegistroBotService {
     private final CategoriaRepository categoriaRepository;
     private final PagoDeudaService pagoDeudaService;
     private final JdbcTemplate jdbcTemplate;
+    private final ValorDolarSyncService valorDolarSyncService;
 
     @Override
     public List<RegistroBotDTO> obtenerPendientes() {
@@ -41,6 +48,29 @@ public class RegistroBotServiceImpl implements RegistroBotService {
                 .orElseThrow(() -> new RuntimeException("Registro no encontrado"));
         registro.setProcesado(true);
         repository.save(registro);
+    }
+
+    @Override
+    @Transactional
+    public RegistroBotDTO crearRegistro(CrearRegistroBotDTO dto) {
+        RegistroBot registro = new RegistroBot();
+        registro.setTipo(dto.tipo());
+        registro.setMonto(dto.monto());
+        registro.setEsIngreso(Boolean.TRUE.equals(dto.esIngreso()));
+        registro.setReferencia(dto.referencia());
+        registro.setFecha(dto.fecha() != null ? dto.fecha() : LocalDate.now());
+        registro.setBancoOrigen(dto.bancoOrigen());
+        registro.setBancoDestino(dto.bancoDestino());
+        registro.setBeneficiario(dto.beneficiario());
+        registro.setTelefono(dto.telefono());
+        registro.setIdentificacion(dto.identificacion());
+        registro.setConcepto(dto.concepto());
+        registro.setProcesado(false);
+        registro.setFechaCreacion(LocalDateTime.now());
+        registro.setMontoDolar(calcularMontoDolar(registro.getMonto(), registro.getFecha()));
+
+        RegistroBot guardado = repository.save(registro);
+        return toDtoConPago(guardado);
     }
 
     @Override
@@ -142,6 +172,17 @@ public class RegistroBotServiceImpl implements RegistroBotService {
             WHERE id IN (SELECT bot_id FROM matched)
             """;
         return jdbcTemplate.update(sql);
+    }
+
+    private Double calcularMontoDolar(Double monto, LocalDate fecha) {
+        if (monto == null || monto <= 0) {
+            return null;
+        }
+
+        return valorDolarSyncService.obtenerOSincronizarTasa(fecha)
+                .filter(tasa -> tasa.compareTo(BigDecimal.ZERO) > 0)
+                .map(tasa -> BigDecimal.valueOf(monto).divide(tasa, 2, RoundingMode.HALF_UP).doubleValue())
+                .orElse(null);
     }
 
     private RegistroBotDTO toDtoConPago(RegistroBot entity) {

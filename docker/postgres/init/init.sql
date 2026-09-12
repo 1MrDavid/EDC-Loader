@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS valor_dolar (
 
 CREATE INDEX IF NOT EXISTS idx_valor_dolar_fecha ON valor_dolar (fecha);
 CREATE INDEX IF NOT EXISTS idx_valor_dolar_dia_mes_ano ON valor_dolar (dia, mes, ano);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_valor_dolar_ano_mes_dia ON valor_dolar (ano, mes, dia);
 
 CREATE TABLE balance_mensual (
     id SERIAL PRIMARY KEY,

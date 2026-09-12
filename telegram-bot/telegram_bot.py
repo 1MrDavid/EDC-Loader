@@ -3,8 +3,8 @@ import json
 import logging
 import requests
 import time
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters, ContextTypes
 import google.generativeai as genai
 import PIL.Image
 import asyncio
@@ -12,6 +12,7 @@ from telegram.error import TimedOut, NetworkError
 
 # Importamos InvalidArgument para atrapar el error 400 (imágenes no soportadas)
 from google.api_core.exceptions import ResourceExhausted, NotFound, DeadlineExceeded, InternalServerError, InvalidArgument
+from api_client import EdcApiError, crear_categoria, crear_deuda, obtener_categorias
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "TELEGRAM_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "GEMINI_API_KEY")
@@ -51,12 +52,108 @@ def obtener_lista_limpia():
         
     return lista_limpia
 
+CASHEA_STATE_KEYS = ("cashea_pendiente", "cashea_esperando_nombre_cat", "categorias_egreso")
+CASHEA_COLOR = "#64748b"
+CASHEA_ICONO = "🛍️"
+
+
+def limpiar_estado_cashea(context: ContextTypes.DEFAULT_TYPE) -> None:
+    for key in CASHEA_STATE_KEYS:
+        context.user_data.pop(key, None)
+
+
+def construir_dto_deuda_cashea(datos: dict, *, crear_dedicada: bool = False, categoria_id: int | None = None) -> dict:
+    return {
+        "nombre": datos["nombre"],
+        "tipoDeuda": "DEFINIDA",
+        "frecuencia": datos.get("frecuencia") or "QUINCENAL",
+        "montoUsd": datos["montoUsd"],
+        "montoBs": None,
+        "montoEur": None,
+        "fechaInicio": datos["fechaInicio"],
+        "fechaFin": None,
+        "cuotasTotales": datos.get("cuotasTotales"),
+        "color": CASHEA_COLOR,
+        "icono": CASHEA_ICONO,
+        "crearCategoriaDedicada": crear_dedicada,
+        "categoriaId": categoria_id,
+    }
+
+
+def construir_teclado_cashea(categorias: list[dict]) -> InlineKeyboardMarkup:
+    filas: list[list[InlineKeyboardButton]] = [
+        [InlineKeyboardButton("⭐ Crear categoría dedicada (recomendado)", callback_data="cashea:dedica")]
+    ]
+
+    fila_categorias: list[InlineKeyboardButton] = []
+    for cat in categorias:
+        etiqueta = f"{cat.get('icono') or '🏷️'} {cat.get('nombre')}"
+        if len(etiqueta) > 28:
+            etiqueta = etiqueta[:27] + "…"
+        fila_categorias.append(
+            InlineKeyboardButton(etiqueta, callback_data=f"cashea:cat:{cat['id']}")
+        )
+        if len(fila_categorias) == 2:
+            filas.append(fila_categorias)
+            fila_categorias = []
+    if fila_categorias:
+        filas.append(fila_categorias)
+
+    filas.append([InlineKeyboardButton("➕ Crear otra categoría", callback_data="cashea:nueva")])
+    filas.append([InlineKeyboardButton("❌ Cancelar", callback_data="cashea:cancel")])
+    return InlineKeyboardMarkup(filas)
+
+
+def texto_resumen_cashea(datos: dict) -> str:
+    return (
+        "🛍️ <b>Deuda Cashea Detectada</b>\n\n"
+        f"🏬 <b>Tienda:</b> {datos['nombre']}\n"
+        f"💰 <b>Deuda Total:</b> ${datos['montoUsd']}\n"
+        f"🔢 <b>Cuotas:</b> {datos['cuotasTotales']} pagos\n"
+        f"📅 <b>Primer Pago:</b> {datos['fechaInicio']}\n\n"
+        "Elige una categoría de egreso. La opción dedicada está recomendada."
+    )
+
+
+def texto_confirmacion_deuda(deuda: dict) -> str:
+    categoria = deuda.get("categoria") or {}
+    nombre_cat = categoria.get("nombre") or "N/A"
+    icono_cat = categoria.get("icono") or ""
+    return (
+        "✅ <b>Deuda Cashea registrada</b>\n\n"
+        f"🏬 <b>Tienda:</b> {deuda.get('nombre')}\n"
+        f"💰 <b>Monto:</b> ${deuda.get('montoUsd')}\n"
+        f"🔢 <b>Cuotas:</b> {deuda.get('cuotasTotales')}\n"
+        f"📅 <b>Primer pago:</b> {deuda.get('fechaInicio')}\n"
+        f"🏷️ <b>Categoría:</b> {icono_cat} {nombre_cat}"
+    )
+
+
+async def persistir_deuda_cashea(query_or_update, context: ContextTypes.DEFAULT_TYPE, dto: dict) -> None:
+    try:
+        deuda = crear_deuda(dto)
+        limpiar_estado_cashea(context)
+        texto = texto_confirmacion_deuda(deuda)
+        if hasattr(query_or_update, "edit_message_text"):
+            await query_or_update.edit_message_text(texto, parse_mode="HTML")
+        else:
+            await query_or_update.message.reply_text(texto, parse_mode="HTML")
+    except EdcApiError as exc:
+        logging.error("Error creando deuda Cashea: %s", exc)
+        mensaje = f"❌ No se pudo crear la deuda: {exc.message}"
+        if hasattr(query_or_update, "edit_message_text"):
+            await query_or_update.edit_message_text(mensaje)
+        else:
+            await query_or_update.message.reply_text(mensaje)
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "¡Sistema inicializado! 🚀\nEnvíame capturas de Pago Móvil o fotos de facturas y extraeré los datos."
     )
 
 async def analizar_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    limpiar_estado_cashea(context)
     mensaje_espera = None
     for intento in range(3):
         try:
@@ -123,8 +220,11 @@ async def analizar_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         - Prioridad 2: Concepto, Motivo o Detalle escrito en la imagen.
         - Prioridad 3: null.
 
-        REGLA GLOBAL DE FECHAS:
-        - Las fechas en los comprobantes venezolanos están en formato Día/Mes/Año (DD/MM/YYYY). Por ejemplo, 8/3/2026 significa 3 de Agosto, NO 8 de Marzo. Devuelve siempre el formato final como YYYY-MM-DD.
+        REGLA ESTRICTA DE FECHAS (LOCALIZACIÓN VENEZUELA):
+            Los recibos y comprobantes utilizan el formato de fecha Europeo/Latinoamericano: DD/MM/YYYY (Día/Mes/Año).
+            Bajo ninguna circunstancia asumas el formato de Estados Unidos.
+            Ejemplo: "02/09/2026" significa 2 de Septiembre, NUNCA 9 de Febrero.
+            Debes extraer esta fecha y devolverla siempre en formato estándar ISO: "YYYY-MM-DD".
         
         Estructura requerida:
         {
@@ -243,10 +343,158 @@ async def analizar_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if os.path.exists(ruta_temporal):
             os.remove(ruta_temporal)
 
+#======================================================================================================================
+# FLUJO DE DEUDAS DE CASHEA
+#======================================================================================================================
+async def analizar_cashea(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    limpiar_estado_cashea(context)
+    mensaje_espera = await update.message.reply_text("🛍️ Analizando plan de Cashea...", read_timeout=15)
+    ruta_temporal = f"temp_cashea_{update.message.message_id}.jpg"
+
+    try:
+        foto = update.message.photo[-1]
+        archivo_telegram = await foto.get_file(read_timeout=20)
+        await archivo_telegram.download_to_drive(ruta_temporal)
+
+        prompt_cashea = """
+        Eres un asistente financiero experto. El usuario ha subido una captura de pantalla de su plan de pagos de la app "Cashea".
+        Tu objetivo es extraer los datos para registrar una nueva deuda en el sistema.
+        
+        INSTRUCCIONES DE EXTRACCIÓN:
+        1. "nombre": Extrae el nombre de la tienda (ej. si dice "Orden en Tiendas Daka", el nombre es "Cashea - Tiendas Daka").
+        2. "monto_usd": Extrae el monto total RESTANTE a pagar (suele decir "$X para terminar de pagar tu compra"). NO incluyas el pago inicial, solo la deuda.
+        3. "cuotas_totales": El número de cuotas restantes (suele ser 3).
+        4. "fecha_inicio": La fecha de la PRIMERA cuota pendiente (ej. "21 de Sept"). Conviértela a formato "YYYY-MM-DD". Asume el año actual o el próximo si el mes es menor al actual.
+        5. "frecuencia": Cashea siempre se paga cada 14 días. Devuelve estrictamente "QUINCENAL".
+        
+        Devuelve SOLO un JSON estricto con esta estructura:
+        {
+            "nombre": "<Nombre de la tienda>",
+            "tipoDeuda": "DEFINIDA",
+            "frecuencia": "QUINCENAL",
+            "montoUsd": <decimal>,
+            "cuotasTotales": <entero>,
+            "fechaInicio": "<YYYY-MM-DD>"
+        }
+        """
+
+        modelos_a_probar = obtener_lista_limpia()
+        respuesta_texto = None
+
+        with PIL.Image.open(ruta_temporal) as img:
+            for nombre_modelo in modelos_a_probar:
+                try:
+                    model = genai.GenerativeModel(nombre_modelo)
+                    response = model.generate_content([prompt_cashea, img], request_options={"timeout": 60})
+                    respuesta_texto = response.text.strip()
+                    break
+                except Exception as e:
+                    logging.warning(f"Fallo con {nombre_modelo} en Cashea: {e}")
+                    continue
+
+        if not respuesta_texto:
+            await mensaje_espera.edit_text("❌ No se pudo procesar la imagen de Cashea.")
+            return
+
+        if respuesta_texto.startswith("```"):
+            respuesta_texto = respuesta_texto.split("\n", 1)[-1].rsplit("\n", 1)[0].strip()
+
+        datos_deuda = json.loads(respuesta_texto)
+        categorias = obtener_categorias()
+
+        context.user_data["cashea_pendiente"] = datos_deuda
+        context.user_data["categorias_egreso"] = categorias
+
+        await mensaje_espera.edit_text(
+            texto_resumen_cashea(datos_deuda),
+            parse_mode="HTML",
+            reply_markup=construir_teclado_cashea(categorias),
+        )
+
+    except EdcApiError as e:
+        logging.error(f"Error consultando categorías para Cashea: {e}")
+        limpiar_estado_cashea(context)
+        await mensaje_espera.edit_text(f"❌ No se pudieron cargar las categorías: {e.message}")
+    except Exception as e:
+        logging.error(f"Error procesando Cashea: {e}")
+        limpiar_estado_cashea(context)
+        await mensaje_espera.edit_text("❌ Error al leer la imagen de Cashea.")
+    finally:
+        if os.path.exists(ruta_temporal):
+            os.remove(ruta_temporal)
+
+
+async def manejar_callback_cashea(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    accion = query.data or ""
+    datos = context.user_data.get("cashea_pendiente")
+
+    if accion == "cashea:cancel":
+        limpiar_estado_cashea(context)
+        await query.edit_message_text("❌ Registro de Cashea cancelado.")
+        return
+
+    if not datos:
+        await query.edit_message_text("⚠️ No hay un plan de Cashea pendiente. Envía de nuevo la captura con /cashea.")
+        return
+
+    if accion == "cashea:dedica":
+        dto = construir_dto_deuda_cashea(datos, crear_dedicada=True)
+        await persistir_deuda_cashea(query, context, dto)
+        return
+
+    if accion == "cashea:nueva":
+        context.user_data["cashea_esperando_nombre_cat"] = True
+        await query.edit_message_text(
+            "✏️ Escribe el nombre de la nueva categoría de egreso.\n"
+            "Se usará para esta deuda de Cashea."
+        )
+        return
+
+    if accion.startswith("cashea:cat:"):
+        categoria_id = int(accion.split(":")[-1])
+        dto = construir_dto_deuda_cashea(datos, categoria_id=categoria_id)
+        await persistir_deuda_cashea(query, context, dto)
+
+
+async def manejar_nombre_categoria_cashea(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.user_data.get("cashea_esperando_nombre_cat"):
+        return
+
+    datos = context.user_data.get("cashea_pendiente")
+    nombre = (update.message.text or "").strip()
+    if not datos:
+        limpiar_estado_cashea(context)
+        await update.message.reply_text("⚠️ No hay un plan de Cashea pendiente. Envía de nuevo la captura con /cashea.")
+        return
+
+    if not nombre:
+        await update.message.reply_text("Escribe un nombre válido para la categoría.")
+        return
+
+    try:
+        categoria = crear_categoria(nombre, color=CASHEA_COLOR, icono=CASHEA_ICONO)
+        dto = construir_dto_deuda_cashea(datos, categoria_id=categoria["id"])
+        await persistir_deuda_cashea(update, context, dto)
+    except EdcApiError as exc:
+        logging.error("Error creando categoría Cashea: %s", exc)
+        await update.message.reply_text(f"❌ No se pudo crear la categoría: {exc.message}")
+
+
 def main():
     app = Application.builder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.PHOTO, analizar_imagen))
+    app.add_handler(CallbackQueryHandler(manejar_callback_cashea, pattern=r"^cashea:"))
+    
+    # 1. Filtro específico: Si la imagen viene con el texto "/cashea" en la descripción
+    app.add_handler(MessageHandler(filters.PHOTO & filters.CaptionRegex(r'(?i)^/cashea'), analizar_cashea))
+    
+    # 2. Filtro general: Si es una imagen normal (sin el comando /cashea)
+    app.add_handler(MessageHandler(filters.PHOTO & ~filters.CaptionRegex(r'(?i)^/cashea'), analizar_imagen))
+
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_nombre_categoria_cashea))
+    
     logging.info("Bot de finanzas iniciado y escuchando...")
     app.run_polling()
 

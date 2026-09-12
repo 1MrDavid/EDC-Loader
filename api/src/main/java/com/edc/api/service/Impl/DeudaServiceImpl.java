@@ -7,6 +7,7 @@ import com.edc.api.dto.DeudaDTO;
 import com.edc.api.dto.PagoDeudaDTO;
 import com.edc.api.model.Categoria;
 import com.edc.api.model.Deuda;
+import com.edc.api.model.Frecuencia;
 import com.edc.api.model.PagoDeuda;
 import com.edc.api.repository.CategoriaRepository;
 import com.edc.api.repository.DeudaRepository;
@@ -157,7 +158,7 @@ public class DeudaServiceImpl implements DeudaService {
 
         deuda.setNombre(nombre);
         deuda.setTipoDeuda(tipoDeuda.toUpperCase());
-        deuda.setFrecuencia(frecuencia.toUpperCase());
+        deuda.setFrecuencia(Frecuencia.from(frecuencia).name());
         deuda.setMontoBs(montoBs);
         deuda.setMontoUsd(montoUsd);
         deuda.setMontoEur(montoEur);

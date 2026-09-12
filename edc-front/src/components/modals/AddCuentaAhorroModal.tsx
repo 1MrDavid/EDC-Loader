@@ -4,6 +4,16 @@ import {
   type CrearCuentaAhorroDTO,
   type CuentaAhorroDTO,
 } from "../../types/finance";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/animate-ui/components/radix/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Props {
   isOpen: boolean;
@@ -15,6 +25,8 @@ interface Props {
 
 const MONEDAS = ["USD", "USDT", "Bs", "EUR"];
 const EMOJIS = ["💰", "🏦", "💵", "🪙", "📈", "🔒", "🎯", "💳"];
+const SELECT_CLASS =
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2";
 
 const DEFAULT_FORM = {
   nombre: "",
@@ -51,8 +63,6 @@ export const AddCuentaAhorroModal = ({ isOpen, onClose, onSubmit, isLoading, cue
     }
   }, [isOpen, cuenta]);
 
-  if (!isOpen) return null;
-
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
 
@@ -70,36 +80,32 @@ export const AddCuentaAhorroModal = ({ isOpen, onClose, onSubmit, isLoading, cue
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-          <h3 className="font-bold text-lg text-slate-800">
-            {isEditMode ? "Editar Billetera" : "Nueva Billetera"}
-          </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
-            ✕
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <DialogHeader>
+            <DialogTitle>{isEditMode ? "Editar Billetera" : "Nueva Billetera"}</DialogTitle>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-bold text-slate-600 mb-1">Nombre</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="nombre-billetera">Nombre</Label>
+            <Input
+              id="nombre-billetera"
               type="text"
               placeholder="Ej. Binance, Efectivo USD, Ahorro..."
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-slate-600 mb-1">Moneda</label>
+          <div className="space-y-2">
+            <Label htmlFor="tipo-moneda">Moneda</Label>
             <select
+              id="tipo-moneda"
               value={tipoMoneda}
               onChange={(e) => setTipoMoneda(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              className={SELECT_CLASS}
             >
               {MONEDAS.map((m) => (
                 <option key={m} value={m}>{m}</option>
@@ -108,37 +114,39 @@ export const AddCuentaAhorroModal = ({ isOpen, onClose, onSubmit, isLoading, cue
           </div>
 
           {!isEditMode && (
-            <div>
-              <label className="block text-sm font-bold text-slate-600 mb-1">Saldo inicial</label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="saldo-inicial">Saldo inicial</Label>
+              <Input
+                id="saldo-inicial"
                 type="number"
                 step="0.01"
                 min="0"
                 value={saldoInicial}
                 onChange={(e) => setSaldoInicial(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           )}
 
           <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-bold text-slate-600 mb-1">Color</label>
-              <input
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="color-billetera">Color</Label>
+              <Input
+                id="color-billetera"
                 type="color"
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
-                className="h-10 w-full p-1 border border-slate-300 rounded-lg cursor-pointer bg-white"
+                className="h-10 cursor-pointer p-1"
               />
             </div>
-            <div className="flex-1">
-              <label className="block text-sm font-bold text-slate-600 mb-1">Ícono</label>
-              <input
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="icono-billetera">Ícono</Label>
+              <Input
+                id="icono-billetera"
                 type="text"
                 maxLength={2}
                 value={icono}
                 onChange={(e) => setIcono(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-center text-xl"
+                className="text-center text-xl"
                 required
               />
             </div>
@@ -146,35 +154,28 @@ export const AddCuentaAhorroModal = ({ isOpen, onClose, onSubmit, isLoading, cue
 
           <div className="flex flex-wrap gap-2">
             {EMOJIS.map((emj) => (
-              <button
+              <Button
                 key={emj}
                 type="button"
+                variant="secondary"
+                size="icon-sm"
                 onClick={() => setIcono(emj)}
-                className="w-8 h-8 rounded bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-lg cursor-pointer"
               >
                 {emj}
-              </button>
+              </Button>
             ))}
           </div>
 
-          <div className="pt-2 flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-slate-300 text-slate-600 font-medium rounded-lg hover:bg-slate-50 cursor-pointer"
-            >
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1 sm:flex-1">
               Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading || !nombre || !icono}
-              className="flex-1 px-4 py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
-            >
+            </Button>
+            <Button type="submit" disabled={isLoading || !nombre || !icono} className="flex-1 sm:flex-1">
               {isLoading ? "Guardando..." : isEditMode ? "Guardar cambios" : "Crear Billetera"}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };

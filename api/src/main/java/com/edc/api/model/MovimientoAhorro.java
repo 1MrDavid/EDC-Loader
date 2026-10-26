@@ -16,7 +16,7 @@ public class MovimientoAhorro {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "cuenta_ahorro_id") 
+    @Column(name = "cuenta_ahorro_id")
     private Long cuentaAhorroId;
 
     @Column(name = "tipo_operacion")
@@ -26,14 +26,19 @@ public class MovimientoAhorro {
 
     private String descripcion;
 
-    // Corregido de Double a LocalDate
     private LocalDate fecha;
 
-    // Corregido de Double a Long
     @Column(name = "movimiento_id")
     private Long movimientoId;
 
-    // Corregido de Double a Long
     @Column(name = "registro_bot_id")
     private Long registroBotId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "categoria_id")
+    private Categoria categoria;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "deuda_id")
+    private Deuda deuda;
 }

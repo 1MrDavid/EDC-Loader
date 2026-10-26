@@ -30,6 +30,13 @@ public class MovimientoAhorroController {
         return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<MovimientoAhorroDTO> actualizar(
+            @PathVariable Long id,
+            @RequestBody CrearMovimientoAhorroDTO dto) {
+        return ResponseEntity.ok(movimientoAhorroService.actualizar(id, dto));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         movimientoAhorroService.eliminar(id);

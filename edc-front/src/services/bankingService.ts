@@ -10,6 +10,7 @@ import {
   type ValorDolarDTO,
   type CategoriaResumenMesDTO,
   type CrearCategoriaDTO,
+  type ActualizarCategoriaDTO,
   type CrearReglaDTO,
   type CategoriaDTO,
   type RegistroBotDTO,
@@ -117,9 +118,15 @@ export const obtenerHistorialGlobal = async () => {
   return data;
 };
 
-// Obtener historial del valor del dolar
-export const obtenerHistorialDolar = async () => {
-  const { data } = await api.get<ValorDolarDTO[]>("/valor-dolar");
+export const obtenerAniosDolar = async (): Promise<number[]> => {
+  const { data } = await api.get<number[]>("/valor-dolar/anios");
+  return data;
+};
+
+export const obtenerHistorialDolar = async (year?: number): Promise<ValorDolarDTO[]> => {
+  const { data } = await api.get<ValorDolarDTO[]>("/valor-dolar", {
+    params: year != null ? { year } : undefined,
+  });
   return data;
 };
 
@@ -135,8 +142,16 @@ export const obtenerResumenCategorias = async (month: number, year: number): Pro
   return response.data;
 };
 
-export const crearCategoria = async (dto: CrearCategoriaDTO) => {
-  const { data } = await api.post("/categorias", dto);
+export const crearCategoria = async (dto: CrearCategoriaDTO): Promise<CategoriaDTO> => {
+  const { data } = await api.post<CategoriaDTO>("/categorias", dto);
+  return data;
+};
+
+export const actualizarCategoria = async (
+  id: number,
+  dto: ActualizarCategoriaDTO
+): Promise<CategoriaDTO> => {
+  const { data } = await api.put<CategoriaDTO>(`/categorias/${id}`, dto);
   return data;
 };
 
@@ -289,6 +304,14 @@ export const registrarMovimientoAhorro = async (
   dto: CrearMovimientoAhorroDTO
 ): Promise<MovimientoAhorroDTO> => {
   const { data } = await api.post<MovimientoAhorroDTO>("/movimientos-ahorro", dto);
+  return data;
+};
+
+export const actualizarMovimientoAhorro = async (
+  id: number,
+  dto: CrearMovimientoAhorroDTO
+): Promise<MovimientoAhorroDTO> => {
+  const { data } = await api.put<MovimientoAhorroDTO>(`/movimientos-ahorro/${id}`, dto);
   return data;
 };
 

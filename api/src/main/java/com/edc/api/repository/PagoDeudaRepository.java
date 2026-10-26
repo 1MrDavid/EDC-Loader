@@ -21,5 +21,7 @@ public interface PagoDeudaRepository extends JpaRepository<PagoDeuda, Long> {
 
     Optional<PagoDeuda> findByMovimientoId(Long movimientoId);
 
+    Optional<PagoDeuda> findByMovimientoAhorroId(Long movimientoAhorroId);
+
     void deleteByRegistroBotIdAndOrigen(Long registroBotId, String origen);
 }

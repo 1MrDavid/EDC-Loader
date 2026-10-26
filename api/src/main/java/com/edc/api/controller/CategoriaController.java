@@ -1,5 +1,6 @@
 package com.edc.api.controller;
 
+import com.edc.api.dto.ActualizarCategoriaDTO;
 import com.edc.api.dto.CategoriaDTO;
 import com.edc.api.dto.CrearCategoriaDTO;
 import com.edc.api.service.CategoriaService;
@@ -23,6 +24,11 @@ public class CategoriaController {
     public ResponseEntity<CategoriaDTO> crear(@RequestBody CrearCategoriaDTO dto) {
         CategoriaDTO nuevaCategoria = categoriaService.crearCategoria(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(nuevaCategoria);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<CategoriaDTO> actualizar(@PathVariable Long id, @RequestBody ActualizarCategoriaDTO dto) {
+        return ResponseEntity.ok(categoriaService.actualizarCategoria(id, dto));
     }
 
     @GetMapping

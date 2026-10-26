@@ -16,8 +16,13 @@ public class ValorDolarController {
     private final ValorDolarService valorDolarService;
 
     @GetMapping
-    public ResponseEntity<List<ValorDolarDTO>> obtenerValoresDolar() {
-        return ResponseEntity.ok(valorDolarService.obtenerTodos());
+    public ResponseEntity<List<ValorDolarDTO>> obtenerValoresDolar(
+            @RequestParam(required = false) Integer year) {
+        return ResponseEntity.ok(valorDolarService.obtenerTodos(year));
+    }
+
+    @GetMapping("/anios")
+    public ResponseEntity<List<Integer>> obtenerAnios() {
+        return ResponseEntity.ok(valorDolarService.obtenerAnios());
     }
 }
-

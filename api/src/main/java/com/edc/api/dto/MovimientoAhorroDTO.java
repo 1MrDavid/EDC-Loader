@@ -10,5 +10,11 @@ public record MovimientoAhorroDTO(
         String descripcion,
         LocalDate fecha,
         Long movimientoId,
-        Long registroBotId
+        Long registroBotId,
+        Long categoriaId,
+        String categoriaNombre,
+        String categoriaColor,
+        String categoriaIcono,
+        Long deudaId,
+        String deudaNombre
 ) {}

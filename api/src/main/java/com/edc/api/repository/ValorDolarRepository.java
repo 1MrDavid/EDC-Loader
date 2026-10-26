@@ -11,6 +11,11 @@ public interface ValorDolarRepository extends JpaRepository<ValorDolar, Integer>
 
     List<ValorDolar> findAllByOrderByAnoAscMesAscDiaAsc();
 
+    List<ValorDolar> findByAnoOrderByMesAscDiaAsc(int ano);
+
+    @Query("SELECT DISTINCT v.ano FROM ValorDolar v ORDER BY v.ano DESC")
+    List<Integer> findDistinctAnosDesc();
+
     boolean existsByFecha(Integer fecha);
 
     boolean existsByAnoAndMesAndDia(int ano, int mes, int dia);

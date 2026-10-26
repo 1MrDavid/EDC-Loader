@@ -1,8 +1,11 @@
 package com.edc.api.service.Impl;
 
+import com.edc.api.dto.ActualizarCategoriaDTO;
 import com.edc.api.dto.CategoriaDTO;
 import com.edc.api.dto.CategoriaResumenMesDTO;
 import com.edc.api.dto.CrearCategoriaDTO;
+import com.edc.api.exception.DuplicateResourceException;
+import com.edc.api.exception.ResourceNotFoundException;
 import com.edc.api.model.Categoria;
 import com.edc.api.repository.CategoriaRepository;
 import com.edc.api.service.CategoriaService;
@@ -24,38 +27,47 @@ public class CategoriaServiceImpl implements CategoriaService {
     @Override
     @Transactional
     public CategoriaDTO crearCategoria(CrearCategoriaDTO dto) {
-        Categoria categoria = new Categoria();
-        categoria.setNombre(dto.nombre());
-        categoria.setTipo(dto.tipo().toUpperCase());
-        categoria.setActiva(true); // Activa por defecto al crearse
+        String nombre = validarNombre(dto.nombre());
+        String tipo = validarTipo(dto.tipo());
 
+        if (categoriaRepository.existsByNombreIgnoreCase(nombre)) {
+            throw new DuplicateResourceException("Ya existe una categoría con el nombre '" + nombre + "'");
+        }
+
+        Categoria categoria = new Categoria();
+        categoria.setNombre(nombre);
+        categoria.setTipo(tipo);
+        categoria.setActiva(true);
         categoria.setColor(dto.color());
         categoria.setIcono(dto.icono());
 
-        Categoria guardada = categoriaRepository.save(categoria);
+        return mapToDto(categoriaRepository.save(categoria));
+    }
 
-        return new CategoriaDTO(
-                guardada.getId(),
-                guardada.getNombre(),
-                guardada.getTipo(),
-                guardada.getColor(),
-                guardada.getIcono(),
-                guardada.getActiva()
-        );
+    @Override
+    @Transactional
+    public CategoriaDTO actualizarCategoria(Long id, ActualizarCategoriaDTO dto) {
+        Categoria categoria = categoriaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
+
+        String nombre = dto.nombre();
+        if (categoriaRepository.existsByNombreIgnoreCaseAndIdNot(nombre, id)) {
+            throw new DuplicateResourceException("Ya existe una categoría con el nombre '" + nombre + "'");
+        }
+
+        categoria.setNombre(nombre);
+        categoria.setTipo(dto.tipo());
+        categoria.setColor(dto.color());
+        categoria.setIcono(dto.icono());
+
+        return mapToDto(categoriaRepository.save(categoria));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CategoriaDTO> obtenerTodas() {
         return categoriaRepository.findAll().stream()
-                .map(categoria -> new CategoriaDTO(
-                        categoria.getId(),
-                        categoria.getNombre(),
-                        categoria.getTipo(),
-                        categoria.getColor(), // Agregado
-                        categoria.getIcono(), // Agregado
-                        categoria.getActiva()
-                ))
+                .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
 
@@ -67,5 +79,34 @@ public class CategoriaServiceImpl implements CategoriaService {
         LocalDate fin = inicio.withDayOfMonth(inicio.lengthOfMonth());
         
         return categoriaRepository.obtenerResumenPorMes(inicio, fin);
+    }
+
+    private CategoriaDTO mapToDto(Categoria categoria) {
+        return new CategoriaDTO(
+                categoria.getId(),
+                categoria.getNombre(),
+                categoria.getTipo(),
+                categoria.getColor(),
+                categoria.getIcono(),
+                categoria.getActiva()
+        );
+    }
+
+    private String validarNombre(String nombre) {
+        if (nombre == null || nombre.isBlank()) {
+            throw new IllegalArgumentException("El nombre de la categoría es obligatorio");
+        }
+        return nombre.trim();
+    }
+
+    private String validarTipo(String tipo) {
+        if (tipo == null || tipo.isBlank()) {
+            throw new IllegalArgumentException("El tipo de la categoría es obligatorio");
+        }
+        String tipoNormalizado = tipo.trim().toUpperCase();
+        if (!tipoNormalizado.equals("INGRESO") && !tipoNormalizado.equals("EGRESO")) {
+            throw new IllegalArgumentException("El tipo debe ser INGRESO o EGRESO");
+        }
+        return tipoNormalizado;
     }
 }

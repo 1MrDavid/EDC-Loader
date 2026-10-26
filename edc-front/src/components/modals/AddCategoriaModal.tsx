@@ -1,5 +1,9 @@
-import { useState, type FormEvent } from "react";
-import { type CrearCategoriaDTO } from "../../types/finance";
+import { useEffect, useState, type FormEvent } from "react";
+import {
+  type ActualizarCategoriaDTO,
+  type CategoriaResumenMesDTO,
+  type CrearCategoriaDTO,
+} from "../../types/finance";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,17 +18,42 @@ import { Label } from "@/components/ui/label";
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CrearCategoriaDTO) => void;
+  onSubmit: (data: CrearCategoriaDTO | ActualizarCategoriaDTO) => void;
   isLoading: boolean;
+  categoria?: CategoriaResumenMesDTO | null;
 }
 
 const EMOJIS = ["🛒", "💡", "🍔", "🚗", "🏠", "💊", "🎉", "💰", "📱", "✈️"];
 
-export const AddCategoriaModal = ({ isOpen, onClose, onSubmit, isLoading }: Props) => {
-  const [nombre, setNombre] = useState("");
-  const [tipo, setTipo] = useState<'INGRESO' | 'EGRESO'>('EGRESO');
-  const [color, setColor] = useState("#64748b");
-  const [icono, setIcono] = useState("🏷️");
+const DEFAULT_FORM = {
+  nombre: "",
+  tipo: "EGRESO" as "INGRESO" | "EGRESO",
+  color: "#64748b",
+  icono: "🏷️",
+};
+
+export const AddCategoriaModal = ({ isOpen, onClose, onSubmit, isLoading, categoria }: Props) => {
+  const isEditMode = !!categoria;
+  const [nombre, setNombre] = useState(DEFAULT_FORM.nombre);
+  const [tipo, setTipo] = useState<"INGRESO" | "EGRESO">(DEFAULT_FORM.tipo);
+  const [color, setColor] = useState(DEFAULT_FORM.color);
+  const [icono, setIcono] = useState(DEFAULT_FORM.icono);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (categoria) {
+      setNombre(categoria.nombre);
+      setTipo(categoria.tipo);
+      setColor(categoria.color);
+      setIcono(categoria.icono);
+    } else {
+      setNombre(DEFAULT_FORM.nombre);
+      setTipo(DEFAULT_FORM.tipo);
+      setColor(DEFAULT_FORM.color);
+      setIcono(DEFAULT_FORM.icono);
+    }
+  }, [isOpen, categoria]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -36,7 +65,7 @@ export const AddCategoriaModal = ({ isOpen, onClose, onSubmit, isLoading }: Prop
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit} className="space-y-5">
           <DialogHeader>
-            <DialogTitle>Nueva Categoría</DialogTitle>
+            <DialogTitle>{isEditMode ? "Editar Categoría" : "Nueva Categoría"}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-2">
@@ -124,7 +153,7 @@ export const AddCategoriaModal = ({ isOpen, onClose, onSubmit, isLoading }: Prop
               Cancelar
             </Button>
             <Button type="submit" disabled={isLoading || !nombre || !icono} className="flex-1 sm:flex-1">
-              {isLoading ? "Guardando..." : "Crear Categoría"}
+              {isLoading ? "Guardando..." : isEditMode ? "Guardar cambios" : "Crear Categoría"}
             </Button>
           </DialogFooter>
         </form>

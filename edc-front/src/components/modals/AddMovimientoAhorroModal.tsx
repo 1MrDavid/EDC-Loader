@@ -1,5 +1,7 @@
-import { useState, type FormEvent } from "react";
-import { type CrearMovimientoAhorroDTO } from "../../types/finance";
+import { useEffect, useState, type FormEvent } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { type CrearMovimientoAhorroDTO, type MovimientoAhorroDTO } from "../../types/finance";
+import { obtenerTodasCategorias } from "../../services/bankingService";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,7 +21,11 @@ interface Props {
   isLoading: boolean;
   cuentaAhorroId: number;
   cuentaNombre: string;
+  movimientoEditando?: MovimientoAhorroDTO | null;
 }
+
+const SELECT_CLASS =
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2";
 
 export const AddMovimientoAhorroModal = ({
   isOpen,
@@ -28,11 +34,40 @@ export const AddMovimientoAhorroModal = ({
   isLoading,
   cuentaAhorroId,
   cuentaNombre,
+  movimientoEditando,
 }: Props) => {
+  const isEditMode = !!movimientoEditando;
   const [tipoOperacion, setTipoOperacion] = useState<"INGRESO" | "EGRESO">("INGRESO");
   const [monto, setMonto] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [fecha, setFecha] = useState(new Date().toISOString().split("T")[0]);
+  const [categoriaId, setCategoriaId] = useState<number | "">("");
+
+  const { data: categorias = [] } = useQuery({
+    queryKey: ["categorias-todas"],
+    queryFn: obtenerTodasCategorias,
+    enabled: isOpen,
+  });
+
+  const categoriasFiltradas = categorias.filter((cat) => cat.tipo === tipoOperacion);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (movimientoEditando) {
+      setTipoOperacion(movimientoEditando.tipoOperacion);
+      setMonto(String(movimientoEditando.monto));
+      setDescripcion(movimientoEditando.descripcion || "");
+      setFecha(movimientoEditando.fecha);
+      setCategoriaId(movimientoEditando.categoriaId ?? "");
+    } else {
+      setTipoOperacion("INGRESO");
+      setMonto("");
+      setDescripcion("");
+      setFecha(new Date().toISOString().split("T")[0]);
+      setCategoriaId("");
+    }
+  }, [isOpen, movimientoEditando]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -42,6 +77,8 @@ export const AddMovimientoAhorroModal = ({
       monto: Number(monto),
       descripcion: descripcion || null,
       fecha,
+      categoriaId: categoriaId === "" ? null : categoriaId,
+      deudaId: movimientoEditando?.deudaId ?? null,
     });
   };
 
@@ -50,7 +87,7 @@ export const AddMovimientoAhorroModal = ({
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit} className="space-y-4">
           <DialogHeader>
-            <DialogTitle>Registrar Movimiento</DialogTitle>
+            <DialogTitle>{isEditMode ? "Editar Movimiento" : "Registrar Movimiento"}</DialogTitle>
             <DialogDescription>{cuentaNombre}</DialogDescription>
           </DialogHeader>
 
@@ -109,6 +146,23 @@ export const AddMovimientoAhorroModal = ({
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="mov-categoria">Categoría</Label>
+            <select
+              id="mov-categoria"
+              value={categoriaId}
+              onChange={(e) => setCategoriaId(e.target.value ? Number(e.target.value) : "")}
+              className={SELECT_CLASS}
+            >
+              <option value="">Sin categoría</option>
+              {categoriasFiltradas.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.icono} {cat.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="mov-desc">Descripción</Label>
             <Input
               id="mov-desc"
@@ -124,7 +178,7 @@ export const AddMovimientoAhorroModal = ({
               Cancelar
             </Button>
             <Button type="submit" variant="default" disabled={isLoading || !monto} className="flex-1 sm:flex-1">
-              {isLoading ? "Guardando..." : "Registrar"}
+              {isLoading ? "Guardando..." : isEditMode ? "Guardar cambios" : "Registrar"}
             </Button>
           </DialogFooter>
         </form>

@@ -114,26 +114,33 @@ def texto_resumen_cashea(datos: dict) -> str:
         "Elige una categoría de egreso. La opción dedicada está recomendada."
     )
 
-
-def texto_confirmacion_deuda(deuda: dict) -> str:
+def texto_confirmacion_deuda(deuda: dict, datos_extraidos: dict) -> str:
     categoria = deuda.get("categoria") or {}
     nombre_cat = categoria.get("nombre") or "N/A"
     icono_cat = categoria.get("icono") or ""
+    
+    monto_inicial = datos_extraidos.get("montoInicial", 0.0)
+    
+    if monto_inicial > 0:
+        mensaje_extra = f"💡 <i>¡No olvides enviar el recibo de tu pago inicial (${monto_inicial}) para registrar el egreso con esta categoría!</i>"
+    else:
+        mensaje_extra = "💡 <i>¡Tu pago inicial fue de $0.00! El cobro de tu deuda comenzará directamente desde la Cuota 1.</i>"
+        
     return (
         "✅ <b>Deuda Cashea registrada</b>\n\n"
         f"🏬 <b>Tienda:</b> {deuda.get('nombre')}\n"
-        f"💰 <b>Monto:</b> ${deuda.get('montoUsd')}\n"
-        f"🔢 <b>Cuotas:</b> {deuda.get('cuotasTotales')}\n"
-        f"📅 <b>Primer pago:</b> {deuda.get('fechaInicio')}\n"
-        f"🏷️ <b>Categoría:</b> {icono_cat} {nombre_cat}"
+        f"💰 <b>Monto Total:</b> ${deuda.get('montoUsd')}\n"
+        f"🔢 <b>Pagos reales:</b> {deuda.get('cuotasTotales')}\n"
+        f"📅 <b>Fecha 1er pago:</b> {deuda.get('fechaInicio')}\n"
+        f"🏷️ <b>Categoría:</b> {icono_cat} {nombre_cat}\n\n"
+        f"{mensaje_extra}"
     )
 
-
-async def persistir_deuda_cashea(query_or_update, context: ContextTypes.DEFAULT_TYPE, dto: dict) -> None:
+async def persistir_deuda_cashea(query_or_update, context: ContextTypes.DEFAULT_TYPE, dto: dict, datos_extraidos: dict) -> None:
     try:
         deuda = crear_deuda(dto)
         limpiar_estado_cashea(context)
-        texto = texto_confirmacion_deuda(deuda)
+        texto = texto_confirmacion_deuda(deuda, datos_extraidos) # <-- Le pasamos los datos aquí
         if hasattr(query_or_update, "edit_message_text"):
             await query_or_update.edit_message_text(texto, parse_mode="HTML")
         else:
@@ -148,8 +155,24 @@ async def persistir_deuda_cashea(query_or_update, context: ContextTypes.DEFAULT_
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    limpiar_estado_cashea(context)
+    texto = (
+        "¡Sistema de Finanzas Inicializado! 🚀\n\n"
+        "📌 <b>¿Cómo usar el bot?</b>\n\n"
+        "🧾 <b>Registrar un Movimiento:</b>\n"
+        "Envíame una foto o captura de tu recibo (Pago Móvil, Transferencia, Punto de Venta). Yo extraeré los datos automáticamente.\n\n"
+        "🛍️ <b>Registrar Deuda Cashea:</b>\n"
+        "Escribe el comando /cashea y luego envíame la captura de tu plan de pagos, o simplemente envía la imagen con /cashea en el comentario."
+    )
+    await update.message.reply_text(texto, parse_mode='HTML')
+
+async def comando_cashea(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    limpiar_estado_cashea(context)
+    context.user_data["esperando_foto_cashea"] = time.time()
     await update.message.reply_text(
-        "¡Sistema inicializado! 🚀\nEnvíame capturas de Pago Móvil o fotos de facturas y extraeré los datos."
+        "🛍️ <b>Modo Cashea activado</b>\n"
+        "Por favor, envíame la captura de pantalla de tu plan de pagos. Tienes 2 minutos antes de que se cancele la espera.",
+        parse_mode="HTML"
     )
 
 async def analizar_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -348,24 +371,55 @@ async def analizar_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
 #======================================================================================================================
 async def analizar_cashea(update: Update, context: ContextTypes.DEFAULT_TYPE):
     limpiar_estado_cashea(context)
-    mensaje_espera = await update.message.reply_text("🛍️ Analizando plan de Cashea...", read_timeout=15)
+    
+    mensaje_espera = None
+    # 1. Protección de red para el mensaje inicial
+    for intento in range(3):
+        try:
+            mensaje_espera = await update.message.reply_text(
+                "🛍️ Analizando plan de Cashea...", 
+                read_timeout=15, 
+                connect_timeout=15
+            )
+            break
+        except (TimedOut, NetworkError) as e:
+            logging.warning(f"Intento {intento+1} de responder a Cashea falló por red: {e}. Reintentando...")
+            await asyncio.sleep(2)
+            
+    if not mensaje_espera:
+        logging.error("Imposible contactar con Telegram para iniciar Cashea. Abortando.")
+        return
+
     ruta_temporal = f"temp_cashea_{update.message.message_id}.jpg"
 
     try:
         foto = update.message.photo[-1]
-        archivo_telegram = await foto.get_file(read_timeout=20)
-        await archivo_telegram.download_to_drive(ruta_temporal)
+        
+        # 2. Protección de red para la descarga de la imagen
+        for intento in range(3):
+            try:
+                archivo_telegram = await foto.get_file(read_timeout=20, connect_timeout=15)
+                await archivo_telegram.download_to_drive(ruta_temporal)
+                break
+            except (TimedOut, NetworkError) as e:
+                logging.warning(f"Intento {intento+1} de descargar foto Cashea falló: {e}. Reintentando...")
+                await asyncio.sleep(2)
+
+        if not os.path.exists(ruta_temporal):
+            await mensaje_espera.edit_text("❌ No se pudo descargar la imagen de Cashea por problemas de red en Telegram.")
+            return
 
         prompt_cashea = """
         Eres un asistente financiero experto. El usuario ha subido una captura de pantalla de su plan de pagos de la app "Cashea".
         Tu objetivo es extraer los datos para registrar una nueva deuda en el sistema.
         
         INSTRUCCIONES DE EXTRACCIÓN:
-        1. "nombre": Extrae el nombre de la tienda (ej. si dice "Orden en Tiendas Daka", el nombre es "Cashea - Tiendas Daka").
-        2. "monto_usd": Extrae el monto total RESTANTE a pagar (suele decir "$X para terminar de pagar tu compra"). NO incluyas el pago inicial, solo la deuda.
-        3. "cuotas_totales": El número de cuotas restantes (suele ser 3).
-        4. "fecha_inicio": La fecha de la PRIMERA cuota pendiente (ej. "21 de Sept"). Conviértela a formato "YYYY-MM-DD". Asume el año actual o el próximo si el mes es menor al actual.
-        5. "frecuencia": Cashea siempre se paga cada 14 días. Devuelve estrictamente "QUINCENAL".
+        1. "nombre": Extrae el nombre de la tienda. Si no dice el nombre, pon "Cashea".
+        2. "montoUsd": Calcula el MONTO TOTAL de la compra (Suma el pago "Inicial" + TODAS las cuotas restantes).
+        3. "montoInicial": El monto exacto del pago "Inicial" (puede ser 0.00).
+        4. "cuotasTotales": Número de pagos REALES. Si el Inicial es MAYOR a $0.00, súmalo como 1 pago más las cuotas restantes (Ej: Inicial + 3 cuotas = 4). Si el Inicial es $0.00, cuenta SOLO las cuotas (Ej: si llega a la Cuota 6, el total es 6).
+        5. "fechaInicio": La fecha del primer pago que involucra dinero real. Si el Inicial es MAYOR a $0.00, usa la fecha del Inicial. Si el Inicial es $0.00, usa la fecha de la "Cuota 1". Conviértela a formato "YYYY-MM-DD".
+        6. "frecuencia": Cashea siempre se paga cada 14 días. Devuelve estrictamente "QUINCENAL".
         
         Devuelve SOLO un JSON estricto con esta estructura:
         {
@@ -373,6 +427,7 @@ async def analizar_cashea(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "tipoDeuda": "DEFINIDA",
             "frecuencia": "QUINCENAL",
             "montoUsd": <decimal>,
+            "montoInicial": <decimal>,
             "cuotasTotales": <entero>,
             "fechaInicio": "<YYYY-MM-DD>"
         }
@@ -441,7 +496,7 @@ async def manejar_callback_cashea(update: Update, context: ContextTypes.DEFAULT_
 
     if accion == "cashea:dedica":
         dto = construir_dto_deuda_cashea(datos, crear_dedicada=True)
-        await persistir_deuda_cashea(query, context, dto)
+        await persistir_deuda_cashea(query, context, dto, datos)
         return
 
     if accion == "cashea:nueva":
@@ -455,7 +510,7 @@ async def manejar_callback_cashea(update: Update, context: ContextTypes.DEFAULT_
     if accion.startswith("cashea:cat:"):
         categoria_id = int(accion.split(":")[-1])
         dto = construir_dto_deuda_cashea(datos, categoria_id=categoria_id)
-        await persistir_deuda_cashea(query, context, dto)
+        await persistir_deuda_cashea(query, context, dto, datos)
 
 
 async def manejar_nombre_categoria_cashea(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -476,23 +531,43 @@ async def manejar_nombre_categoria_cashea(update: Update, context: ContextTypes.
     try:
         categoria = crear_categoria(nombre, color=CASHEA_COLOR, icono=CASHEA_ICONO)
         dto = construir_dto_deuda_cashea(datos, categoria_id=categoria["id"])
-        await persistir_deuda_cashea(update, context, dto)
+        await persistir_deuda_cashea(update, context, dto, datos)
     except EdcApiError as exc:
         logging.error("Error creando categoría Cashea: %s", exc)
         await update.message.reply_text(f"❌ No se pudo crear la categoría: {exc.message}")
 
+async def router_fotos(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    caption = update.message.caption.lower() if update.message.caption else ""
+    tiempo_cashea = context.user_data.get("esperando_foto_cashea")
+    
+    es_cashea = False
+    
+    # Verificamos si tiene el comando en el caption o si estamos en ventana de tiempo
+    if "/cashea" in caption:
+        es_cashea = True
+    elif tiempo_cashea:
+        # Si pasaron menos de 120 segundos (2 minutos)
+        if time.time() - tiempo_cashea <= 120:
+            es_cashea = True
+        # Limpiamos el estado inmediatamente para no interferir con futuras fotos
+        context.user_data.pop("esperando_foto_cashea", None)
+        
+    if es_cashea:
+        await analizar_cashea(update, context)
+    else:
+        await analizar_imagen(update, context)
 
 def main():
     app = Application.builder().token(TELEGRAM_TOKEN).build()
+    
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("cashea", comando_cashea)) # Nuevo comando
+    
     app.add_handler(CallbackQueryHandler(manejar_callback_cashea, pattern=r"^cashea:"))
     
-    # 1. Filtro específico: Si la imagen viene con el texto "/cashea" en la descripción
-    app.add_handler(MessageHandler(filters.PHOTO & filters.CaptionRegex(r'(?i)^/cashea'), analizar_cashea))
+    # Un solo handler para TODAS las fotos, el router decide a dónde van
+    app.add_handler(MessageHandler(filters.PHOTO, router_fotos))
     
-    # 2. Filtro general: Si es una imagen normal (sin el comando /cashea)
-    app.add_handler(MessageHandler(filters.PHOTO & ~filters.CaptionRegex(r'(?i)^/cashea'), analizar_imagen))
-
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_nombre_categoria_cashea))
     
     logging.info("Bot de finanzas iniciado y escuchando...")

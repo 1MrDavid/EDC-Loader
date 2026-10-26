@@ -9,5 +9,6 @@ public record RegistrarPagoDeudaDTO(
         LocalDate fechaPago,
         Double montoPagadoBs,
         Double montoPagadoUsd,
-        String origen
+        String origen,
+        Long cuentaAhorroId
 ) {}

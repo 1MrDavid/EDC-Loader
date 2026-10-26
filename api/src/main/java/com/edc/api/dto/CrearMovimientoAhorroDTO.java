@@ -7,5 +7,7 @@ public record CrearMovimientoAhorroDTO(
         String tipoOperacion,
         Double monto,
         String descripcion,
-        LocalDate fecha
+        LocalDate fecha,
+        Long categoriaId,
+        Long deudaId
 ) {}

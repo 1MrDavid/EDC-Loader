@@ -120,6 +120,13 @@ export interface CrearCategoriaDTO {
   icono: string;
 }
 
+export interface ActualizarCategoriaDTO {
+  nombre: string;
+  tipo: 'INGRESO' | 'EGRESO';
+  color: string;
+  icono: string;
+}
+
 export interface CategoriaDTO {
   id: number;
   nombre: string;
@@ -232,7 +239,8 @@ export interface RegistrarPagoDeudaDTO {
   fechaPago: string;
   montoPagadoBs?: number | null;
   montoPagadoUsd?: number | null;
-  origen?: 'AUTO' | 'MANUAL';
+  origen?: 'AUTO' | 'MANUAL' | 'BILLETERA';
+  cuentaAhorroId?: number | null;
 }
 
 export interface MetaAhorroDTO {
@@ -322,6 +330,12 @@ export interface MovimientoAhorroDTO {
   fecha: string;
   movimientoId: number | null;
   registroBotId: number | null;
+  categoriaId?: number | null;
+  categoriaNombre?: string | null;
+  categoriaColor?: string | null;
+  categoriaIcono?: string | null;
+  deudaId?: number | null;
+  deudaNombre?: string | null;
 }
 
 export interface CrearMovimientoAhorroDTO {
@@ -330,4 +344,6 @@ export interface CrearMovimientoAhorroDTO {
   monto: number;
   descripcion?: string | null;
   fecha: string;
+  categoriaId?: number | null;
+  deudaId?: number | null;
 }

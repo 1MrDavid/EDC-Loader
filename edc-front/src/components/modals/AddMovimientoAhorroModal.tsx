@@ -1,5 +1,18 @@
-import { useState, type FormEvent } from "react";
-import { type CrearMovimientoAhorroDTO } from "../../types/finance";
+import { useEffect, useState, type FormEvent } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { type CrearMovimientoAhorroDTO, type MovimientoAhorroDTO } from "../../types/finance";
+import { obtenerTodasCategorias } from "../../services/bankingService";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/animate-ui/components/radix/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Props {
   isOpen: boolean;
@@ -8,7 +21,11 @@ interface Props {
   isLoading: boolean;
   cuentaAhorroId: number;
   cuentaNombre: string;
+  movimientoEditando?: MovimientoAhorroDTO | null;
 }
+
+const SELECT_CLASS =
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2";
 
 export const AddMovimientoAhorroModal = ({
   isOpen,
@@ -17,13 +34,40 @@ export const AddMovimientoAhorroModal = ({
   isLoading,
   cuentaAhorroId,
   cuentaNombre,
+  movimientoEditando,
 }: Props) => {
+  const isEditMode = !!movimientoEditando;
   const [tipoOperacion, setTipoOperacion] = useState<"INGRESO" | "EGRESO">("INGRESO");
   const [monto, setMonto] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [fecha, setFecha] = useState(new Date().toISOString().split("T")[0]);
+  const [categoriaId, setCategoriaId] = useState<number | "">("");
 
-  if (!isOpen) return null;
+  const { data: categorias = [] } = useQuery({
+    queryKey: ["categorias-todas"],
+    queryFn: obtenerTodasCategorias,
+    enabled: isOpen,
+  });
+
+  const categoriasFiltradas = categorias.filter((cat) => cat.tipo === tipoOperacion);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (movimientoEditando) {
+      setTipoOperacion(movimientoEditando.tipoOperacion);
+      setMonto(String(movimientoEditando.monto));
+      setDescripcion(movimientoEditando.descripcion || "");
+      setFecha(movimientoEditando.fecha);
+      setCategoriaId(movimientoEditando.categoriaId ?? "");
+    } else {
+      setTipoOperacion("INGRESO");
+      setMonto("");
+      setDescripcion("");
+      setFecha(new Date().toISOString().split("T")[0]);
+      setCategoriaId("");
+    }
+  }, [isOpen, movimientoEditando]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -33,102 +77,112 @@ export const AddMovimientoAhorroModal = ({
       monto: Number(monto),
       descripcion: descripcion || null,
       fecha,
+      categoriaId: categoriaId === "" ? null : categoriaId,
+      deudaId: movimientoEditando?.deudaId ?? null,
     });
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-          <div>
-            <h3 className="font-bold text-lg text-slate-800">Registrar Movimiento</h3>
-            <p className="text-xs text-slate-500">{cuentaNombre}</p>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <DialogHeader>
+            <DialogTitle>{isEditMode ? "Editar Movimiento" : "Registrar Movimiento"}</DialogTitle>
+            <DialogDescription>{cuentaNombre}</DialogDescription>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-bold text-slate-600 mb-2">Tipo</label>
+          <div className="space-y-2">
+            <Label>Tipo</Label>
             <div className="flex gap-2">
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => setTipoOperacion("INGRESO")}
-                className={`flex-1 py-2 rounded-lg text-sm font-bold border cursor-pointer ${
+                className={`flex-1 ${
                   tipoOperacion === "INGRESO"
-                    ? "border-emerald-500 bg-emerald-50 text-emerald-600"
-                    : "border-slate-200 text-slate-400"
+                    ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    : "text-muted-foreground"
                 }`}
               >
                 ↓ Ingreso
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => setTipoOperacion("EGRESO")}
-                className={`flex-1 py-2 rounded-lg text-sm font-bold border cursor-pointer ${
+                className={`flex-1 ${
                   tipoOperacion === "EGRESO"
-                    ? "border-rose-500 bg-rose-50 text-rose-600"
-                    : "border-slate-200 text-slate-400"
+                    ? "border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                    : "text-muted-foreground"
                 }`}
               >
                 ↑ Egreso
-              </button>
+              </Button>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-slate-600 mb-1">Monto</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="mov-monto">Monto</Label>
+            <Input
+              id="mov-monto"
               type="number"
               step="0.01"
               min="0.01"
               value={monto}
               onChange={(e) => setMonto(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-slate-600 mb-1">Fecha</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="mov-fecha">Fecha</Label>
+            <Input
+              id="mov-fecha"
               type="date"
               value={fecha}
               onChange={(e) => setFecha(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg cursor-pointer"
               required
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-slate-600 mb-1">Descripción</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="mov-categoria">Categoría</Label>
+            <select
+              id="mov-categoria"
+              value={categoriaId}
+              onChange={(e) => setCategoriaId(e.target.value ? Number(e.target.value) : "")}
+              className={SELECT_CLASS}
+            >
+              <option value="">Sin categoría</option>
+              {categoriasFiltradas.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.icono} {cat.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="mov-desc">Descripción</Label>
+            <Input
+              id="mov-desc"
               type="text"
               placeholder="Ej. Depósito mensual, retiro..."
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          <div className="pt-2 flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-slate-300 text-slate-600 font-medium rounded-lg hover:bg-slate-50 cursor-pointer"
-            >
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1 sm:flex-1">
               Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading || !monto}
-              className="flex-1 px-4 py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
-            >
-              {isLoading ? "Guardando..." : "Registrar"}
-            </button>
-          </div>
+            </Button>
+            <Button type="submit" variant="default" disabled={isLoading || !monto} className="flex-1 sm:flex-1">
+              {isLoading ? "Guardando..." : isEditMode ? "Guardar cambios" : "Registrar"}
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };

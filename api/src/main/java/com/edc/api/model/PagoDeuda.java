@@ -34,4 +34,7 @@ public class PagoDeuda {
 
     @Column(name = "origen")
     private String origen;
+
+    @Column(name = "movimiento_ahorro_id")
+    private Long movimientoAhorroId;
 }

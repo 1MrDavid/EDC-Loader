@@ -9,12 +9,25 @@ import {
   registrarPagoDeuda,
   eliminarPagoDeuda
 } from "../../services/bankingService";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/animate-ui/components/radix/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   registro: RegistroBotDTO | null;
 }
+
+const SELECT_CLASS =
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2";
 
 export const EditBotModal = ({ isOpen, onClose, registro }: Props) => {
   const queryClient = useQueryClient();
@@ -130,8 +143,6 @@ export const EditBotModal = ({ isOpen, onClose, registro }: Props) => {
     },
   });
 
-  if (!isOpen || !registro) return null;
-
   const patronPreview =
     tipoPatron === "CONCEPTO"
       ? formData.concepto
@@ -139,100 +150,114 @@ export const EditBotModal = ({ isOpen, onClose, registro }: Props) => {
         ? formData.beneficiario
         : formData.referencia;
 
+  const categoriasFiltradas = categorias?.filter(cat =>
+    cat.tipo === (formData.esIngreso ? 'INGRESO' : 'EGRESO')
+  ) || [];
+
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold text-slate-800 mb-6">Editar Registro en Vivo</h2>
-        
+    <Dialog open={isOpen && !!registro} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Editar Registro en Vivo</DialogTitle>
+        </DialogHeader>
+
         <div className="space-y-4">
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase">Monto</label>
-              <input 
-                type="number" 
-                value={formData.monto || 0} 
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="bot-monto" className="text-xs uppercase text-muted-foreground">Monto</Label>
+              <Input
+                id="bot-monto"
+                type="number"
+                value={formData.monto || 0}
                 onChange={e => setFormData({...formData, monto: Number(e.target.value)})}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 mt-1 cursor-text"
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase">Naturaleza</label>
-              <select 
+            <div className="space-y-2">
+              <Label htmlFor="bot-naturaleza" className="text-xs uppercase text-muted-foreground">Naturaleza</Label>
+              <select
+                id="bot-naturaleza"
                 value={formData.esIngreso ? "true" : "false"}
-                onChange={e => setFormData({...formData, esIngreso: e.target.value === "true"})}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 mt-1 bg-white cursor-pointer"
+                onChange={e => setFormData({
+                  ...formData,
+                  esIngreso: e.target.value === "true",
+                  categoria: null,
+                })}
+                className={SELECT_CLASS}
               >
                 <option value="false">Egreso (Resta)</option>
                 <option value="true">Ingreso (Suma)</option>
               </select>
             </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase">Fecha</label>
-              <input 
-                type="date" 
-                value={formData.fecha || ''} 
+            <div className="space-y-2">
+              <Label htmlFor="bot-fecha" className="text-xs uppercase text-muted-foreground">Fecha</Label>
+              <Input
+                id="bot-fecha"
+                type="date"
+                value={formData.fecha || ''}
                 onChange={e => setFormData({...formData, fecha: e.target.value})}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 mt-1 cursor-pointer"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase">Banco Origen</label>
-              <input 
-                type="text" 
-                value={formData.bancoOrigen || ''} 
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="bot-origen" className="text-xs uppercase text-muted-foreground">Banco Origen</Label>
+              <Input
+                id="bot-origen"
+                type="text"
+                value={formData.bancoOrigen || ''}
                 onChange={e => setFormData({...formData, bancoOrigen: e.target.value})}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 mt-1 font-mono text-sm cursor-text"
+                className="font-mono text-sm"
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase">Banco Destino</label>
-              <input 
-                type="text" 
-                value={formData.bancoDestino || ''} 
+            <div className="space-y-2">
+              <Label htmlFor="bot-destino" className="text-xs uppercase text-muted-foreground">Banco Destino</Label>
+              <Input
+                id="bot-destino"
+                type="text"
+                value={formData.bancoDestino || ''}
                 onChange={e => setFormData({...formData, bancoDestino: e.target.value})}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 mt-1 font-mono text-sm cursor-text"
+                className="font-mono text-sm"
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase">Referencia</label>
-              <input 
-                type="text" 
-                value={formData.referencia || ''} 
+            <div className="space-y-2">
+              <Label htmlFor="bot-ref" className="text-xs uppercase text-muted-foreground">Referencia</Label>
+              <Input
+                id="bot-ref"
+                type="text"
+                value={formData.referencia || ''}
                 onChange={e => setFormData({...formData, referencia: e.target.value})}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 mt-1 font-mono text-sm cursor-text"
+                className="font-mono text-sm"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase">Concepto / Detalle</label>
-              <input 
-                type="text" 
-                value={formData.concepto || ''} 
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="bot-concepto" className="text-xs uppercase text-muted-foreground">Concepto / Detalle</Label>
+              <Input
+                id="bot-concepto"
+                type="text"
+                value={formData.concepto || ''}
                 onChange={e => setFormData({...formData, concepto: e.target.value})}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 mt-1 cursor-text"
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase">Beneficiario / Contraparte</label>
-              <input 
-                type="text" 
-                value={formData.beneficiario || ''} 
+            <div className="space-y-2">
+              <Label htmlFor="bot-beneficiario" className="text-xs uppercase text-muted-foreground">Beneficiario / Contraparte</Label>
+              <Input
+                id="bot-beneficiario"
+                type="text"
+                value={formData.beneficiario || ''}
                 onChange={e => setFormData({...formData, beneficiario: e.target.value})}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 mt-1 cursor-text"
               />
             </div>
           </div>
 
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-6">
-            <label className="text-xs font-semibold text-slate-500 uppercase">Asignar Categoría</label>
-            <select 
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 mt-1 bg-white mb-4 cursor-pointer"
+          <div className="mt-2 space-y-3 rounded-xl border border-border bg-muted p-4">
+            <Label htmlFor="bot-categoria" className="text-xs uppercase text-muted-foreground">Asignar Categoría</Label>
+            <select
+              id="bot-categoria"
+              className={SELECT_CLASS}
               value={formData.categoria?.id || ""}
               onChange={e => {
                 const cat = categorias?.find(c => c.id === Number(e.target.value));
@@ -243,39 +268,39 @@ export const EditBotModal = ({ isOpen, onClose, registro }: Props) => {
               }}
             >
               <option value="">-- Seleccionar Categoría --</option>
-              {categorias?.map(cat => (
+              {categoriasFiltradas.map(cat => (
                 <option key={cat.id} value={cat.id}>{cat.icono} {cat.nombre}</option>
               ))}
             </select>
 
             {formData.categoria?.id && (
-              <div className="flex flex-col gap-3 pt-2 border-t border-slate-200">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+              <div className="flex flex-col gap-3 border-t border-border pt-2">
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
                     checked={crearRegla}
                     onChange={(e) => setCrearRegla(e.target.checked)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 cursor-pointer"
+                    className="h-4 w-4 rounded border-input"
                   />
-                  <span className="text-sm font-medium text-slate-700">Crear regla automática para futuros movimientos</span>
+                  <span className="text-sm font-medium text-foreground">Crear regla automática para futuros movimientos</span>
                 </label>
-                
+
                 {crearRegla && (
-                  <div className="pl-6 flex flex-col gap-2">
+                  <div className="flex flex-col gap-2 pl-6">
                     <div className="flex items-center gap-3">
-                      <span className="text-sm text-slate-500">Basado en:</span>
-                      <select 
+                      <span className="text-sm text-muted-foreground">Basado en:</span>
+                      <select
                         value={tipoPatron}
                         onChange={(e) => setTipoPatron(e.target.value as "CONCEPTO" | "BENEFICIARIO" | "REFERENCIA")}
-                        className="border border-slate-200 rounded-lg px-2 py-1 text-sm bg-white cursor-pointer"
+                        className={SELECT_CLASS}
                       >
                         <option value="CONCEPTO">Concepto</option>
                         <option value="BENEFICIARIO">Beneficiario</option>
                         <option value="REFERENCIA">Referencia</option>
                       </select>
                     </div>
-                    <p className="text-xs text-slate-400">
-                      Patrón: <span className="font-mono text-slate-600">{patronPreview?.trim() || "(vacío — no se podrá crear la regla)"}</span>
+                    <p className="text-xs text-muted-foreground">
+                      Patrón: <span className="font-mono text-foreground">{patronPreview?.trim() || "(vacío — no se podrá crear la regla)"}</span>
                     </p>
                   </div>
                 )}
@@ -284,61 +309,66 @@ export const EditBotModal = ({ isOpen, onClose, registro }: Props) => {
           </div>
 
           {!formData.esIngreso && formData.categoria?.id && (
-            <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
-              <label className="text-xs font-semibold text-emerald-700 uppercase">Pago de Deuda</label>
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+              <Label className="text-xs uppercase text-emerald-700 dark:text-emerald-400">Pago de Deuda</Label>
               {formData.pagoDeudaId ? (
                 <div className="mt-2 flex items-center justify-between">
-                  <span className="text-sm font-medium text-emerald-800">
+                  <span className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
                     ✓ Pagó: {formData.deudaNombre}
                   </span>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => pagoMutation.mutate("delete")}
                     disabled={pagoMutation.isPending}
-                    className="text-xs text-rose-600 hover:text-rose-800 font-semibold cursor-pointer"
+                    className="text-rose-600 hover:text-rose-700 dark:text-rose-400"
                   >
                     Quitar pago
-                  </button>
+                  </Button>
                 </div>
               ) : deudaAsociada ? (
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-sm text-slate-600">
-                    Categoría vinculada a: <strong>{deudaAsociada.nombre}</strong>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    Categoría vinculada a: <strong className="text-foreground">{deudaAsociada.nombre}</strong>
                   </span>
-                  <button
+                  <Button
                     type="button"
+                    size="sm"
                     onClick={() => pagoMutation.mutate("register")}
                     disabled={pagoMutation.isPending}
-                    className="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-emerald-700 cursor-pointer"
+                    className="bg-emerald-600 text-white hover:bg-emerald-700"
                   >
                     Marcar como pagado
-                  </button>
+                  </Button>
                 </div>
               ) : (
-                <p className="text-xs text-slate-500 mt-2">Esta categoría no está vinculada a ninguna deuda activa.</p>
+                <p className="mt-2 text-xs text-muted-foreground">Esta categoría no está vinculada a ninguna deuda activa.</p>
               )}
             </div>
           )}
 
           {feedback && (
-            <div className={`p-3 rounded-lg text-sm ${feedback.includes("error") || feedback.includes("vacío") ? "bg-rose-50 text-rose-700 border border-rose-100" : "bg-emerald-50 text-emerald-700 border border-emerald-100"}`}>
+            <div className={`rounded-lg p-3 text-sm ${feedback.includes("error") || feedback.includes("vacío") ? "border border-rose-200 bg-rose-500/10 text-rose-700 dark:border-rose-900 dark:text-rose-400" : "border border-emerald-200 bg-emerald-500/10 text-emerald-700 dark:border-emerald-900 dark:text-emerald-400"}`}>
               {feedback}
             </div>
           )}
-
         </div>
 
-        <div className="mt-8 flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition cursor-pointer">Cancelar</button>
-          <button 
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="default"
             onClick={() => mutation.mutate(formData)}
             disabled={mutation.isPending || (crearRegla && !patronPreview?.trim())}
-            className="px-6 py-2 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 disabled:opacity-50 transition cursor-pointer disabled:cursor-not-allowed"
           >
             {mutation.isPending ? 'Guardando...' : 'Guardar y Aplicar'}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

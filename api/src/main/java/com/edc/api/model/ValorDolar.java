@@ -6,7 +6,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "valor_dolar")
+@Table(
+        name = "valor_dolar",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uq_valor_dolar_ano_mes_dia", columnNames = {"ano", "mes", "dia"})
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

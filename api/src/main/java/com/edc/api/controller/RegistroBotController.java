@@ -1,5 +1,6 @@
 package com.edc.api.controller;
 
+import com.edc.api.dto.CrearRegistroBotDTO;
 import com.edc.api.dto.RegistroBotDTO;
 import com.edc.api.service.RegistroBotService;
 import lombok.AllArgsConstructor;
@@ -19,6 +20,11 @@ public class RegistroBotController {
     @GetMapping("/pendientes")
     public ResponseEntity<List<RegistroBotDTO>> obtenerPendientes() {
         return ResponseEntity.ok(service.obtenerPendientes());
+    }
+
+    @PostMapping("/recibos")
+    public ResponseEntity<RegistroBotDTO> crearRegistro(@RequestBody CrearRegistroBotDTO dto) {
+        return ResponseEntity.ok(service.crearRegistro(dto));
     }
 
     @PostMapping("/conciliar")

@@ -3,10 +3,14 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import { type BalanceGlobalMensualDTO } from '../../types/finance';
+import { Button } from '@/components/ui/button';
 
 interface Props {
   data: BalanceGlobalMensualDTO[];
 }
+
+const SELECT_CLASS =
+  "flex h-9 items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 export const GlobalTrendChart = ({ data }: Props) => {
   const [currency, setCurrency] = useState<'BS' | 'USD'>('BS');
@@ -28,66 +32,61 @@ export const GlobalTrendChart = ({ data }: Props) => {
     : data.slice(-monthsToShow);
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+    <div className="bg-card text-card-foreground p-6 rounded-2xl border border-border">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h3 className="text-slate-800 font-bold text-lg">Evolución de Ingresos vs Egresos</h3>
-          <p className="text-slate-500 text-xs">Comparativa histórica mensual</p>
+          <h3 className="text-foreground font-bold text-lg">Evolución de Ingresos vs Egresos</h3>
+          <p className="text-muted-foreground text-xs">Comparativa histórica mensual</p>
         </div>
 
-        {/* Controles del Gráfico */}
         <div className="flex items-center gap-3">
-          
-          {/* Selector de meses a mostrar */}
           <select 
             value={monthsToShow}
             onChange={(e) => setMonthsToShow(Number(e.target.value))}
-            className="text-xs font-bold border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 text-slate-600 outline-none focus:ring-2 focus:ring-slate-200 cursor-pointer"
+            className={SELECT_CLASS}
           >
             <option value={6}>Últimos 6 meses</option>
             <option value={12}>Últimos 12 meses</option>
             <option value={0}>Histórico completo</option>
           </select>
 
-          {/* Switch de Moneda */}
-          <div className="flex bg-slate-100 p-1 rounded-xl">
-            <button
+          <div className="flex rounded-lg border border-border bg-muted p-0.5">
+            <Button
+              type="button"
+              size="xs"
+              variant={currency === 'BS' ? 'secondary' : 'ghost'}
               onClick={() => setCurrency('BS')}
-              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                currency === 'BS' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              }`}
             >
               Bs.
-            </button>
-            <button
+            </Button>
+            <Button
+              type="button"
+              size="xs"
+              variant={currency === 'USD' ? 'secondary' : 'ghost'}
               onClick={() => setCurrency('USD')}
-              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                currency === 'USD' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              }`}
             >
               USD
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="h-[350px]">
         <ResponsiveContainer width="100%" height="100%">
-          {/* Asegúrate de pasar displayData en lugar de data */}
           <BarChart data={displayData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
             <XAxis 
               dataKey="periodo" 
               tickFormatter={(date) => {
                 const d = new Date(date + 'T00:00:00');
                 return d.toLocaleDateString('es-VE', { month: 'short', year: 'numeric' });
               }}
-              tick={{ fontSize: 12, fill: '#64748b' }}
+              tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis 
-              tick={{ fontSize: 11, fill: '#64748b' }}
+              tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(value) => {
@@ -97,8 +96,14 @@ export const GlobalTrendChart = ({ data }: Props) => {
             />
             
             <Tooltip 
-              cursor={{ fill: '#f8fafc' }}
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+              cursor={{ fill: "var(--muted)" }}
+              contentStyle={{
+                borderRadius: "12px",
+                border: "1px solid var(--border)",
+                backgroundColor: "var(--popover)",
+                color: "var(--popover-foreground)",
+                boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+              }}
               formatter={(value: any) => {
                 const numericValue = typeof value === 'number' ? value : 0;
                 return [

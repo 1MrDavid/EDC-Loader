@@ -4,18 +4,22 @@ import com.edc.api.client.DolarApiClient;
 import com.edc.api.dto.external.DolarActualApiDTO;
 import com.edc.api.dto.external.DolarHistoricoApiDTO;
 import com.edc.api.model.ValorDolar;
+import com.edc.api.repository.RegistroBotRepository;
 import com.edc.api.repository.ValorDolarRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 
 @Service
@@ -25,6 +29,7 @@ public class ValorDolarSyncService {
 
     private final DolarApiClient dolarApiClient;
     private final ValorDolarRepository valorDolarRepository;
+    private final RegistroBotRepository registroBotRepository;
 
     /**
      * TAREA 1: Se ejecuta automáticamente al arrancar la aplicación.
@@ -57,7 +62,7 @@ public class ValorDolarSyncService {
             while (!fechaActual.isAfter(hoy)) {
                 // ceilingEntry busca la fecha. Si no existe, avanza hasta encontrar el siguiente día hábil
                 Map.Entry<LocalDate, Double> entradaSiguiente = mapaTasas.ceilingEntry(fechaActual);
-                
+
                 Double precio = null;
                 if (entradaSiguiente != null) {
                     precio = entradaSiguiente.getValue();
@@ -73,10 +78,10 @@ public class ValorDolarSyncService {
                     boolean guardado = procesarYGuardar(fechaActual, precio);
                     if (guardado) registrosNuevos++;
                 }
-                
+
                 fechaActual = fechaActual.plusDays(1);
             }
-            
+
             log.info("Sincronización histórica completada. Se añadieron {} registros nuevos.", registrosNuevos);
         } catch (Exception e) {
             log.error("Error al sincronizar el histórico del dólar: {}", e.getMessage());
@@ -93,9 +98,6 @@ public class ValorDolarSyncService {
         log.info("Consultando valor actual del dólar BCV...");
         try {
             DolarActualApiDTO actual = dolarApiClient.obtenerDolarActual();
-            
-            // Ignoramos la fecha interna de la API para garantizar que tu sistema 
-            // no deje huecos si se enciende un sábado o domingo.
             LocalDate hoy = LocalDate.now();
 
             if (hoy.getYear() >= 2025) {
@@ -110,15 +112,44 @@ public class ValorDolarSyncService {
     }
 
     /**
-     * Método auxiliar para evitar duplicidad de código.
-     * Retorna true si se insertó, false si ya existía.
+     * Resuelve la tasa para una fecha: primero local, luego API externa.
+     * Si la API responde, persiste la tasa (sin duplicar) y la devuelve.
      */
-    private boolean procesarYGuardar(LocalDate date, Double precio) {
-        if (precio == null) return false;
+    @Transactional
+    public Optional<BigDecimal> obtenerOSincronizarTasa(LocalDate fecha) {
+        if (fecha == null) {
+            return Optional.empty();
+        }
 
-        Integer fechaInt = date.getYear() * 10000 + date.getMonthValue() * 100 + date.getDayOfMonth();
+        Integer fechaInt = toFechaInt(fecha);
+        Optional<ValorDolar> local = valorDolarRepository.findByFecha(fechaInt);
+        if (local.isPresent() && local.get().getPrecio() > 0) {
+            return Optional.of(BigDecimal.valueOf(local.get().getPrecio()));
+        }
 
-        if (valorDolarRepository.existsByFecha(fechaInt)) {
+        Double precioExterno = consultarTasaExterna(fecha);
+        if (precioExterno == null || precioExterno <= 0) {
+            return Optional.empty();
+        }
+
+        procesarYGuardar(fecha, precioExterno);
+        return Optional.of(BigDecimal.valueOf(precioExterno));
+    }
+
+    /**
+     * Inserta la tasa si no existe (PK fecha + unique ano/mes/dia).
+     * Tras un insert exitoso, recalcula registros bot huérfanos.
+     */
+    @Transactional
+    public boolean procesarYGuardar(LocalDate date, Double precio) {
+        if (date == null || precio == null || precio <= 0) {
+            return false;
+        }
+
+        Integer fechaInt = toFechaInt(date);
+
+        if (valorDolarRepository.existsByFecha(fechaInt)
+                || valorDolarRepository.existsByAnoAndMesAndDia(date.getYear(), date.getMonthValue(), date.getDayOfMonth())) {
             return false;
         }
 
@@ -129,7 +160,49 @@ public class ValorDolarSyncService {
         nuevoRegistro.setDia(date.getDayOfMonth());
         nuevoRegistro.setPrecio(precio);
 
-        valorDolarRepository.save(nuevoRegistro);
+        try {
+            valorDolarRepository.saveAndFlush(nuevoRegistro);
+        } catch (DataIntegrityViolationException ex) {
+            log.debug("Se omitió duplicado de valor_dolar para la fecha {}", date);
+            return false;
+        }
+
+        int actualizados = registroBotRepository.actualizarMontosHuerfanos(
+                BigDecimal.valueOf(precio),
+                date
+        );
+        log.info("Se recalcularon {} registros pendientes con la tasa del {}", actualizados, date);
         return true;
+    }
+
+    private Double consultarTasaExterna(LocalDate fecha) {
+        try {
+            if (!fecha.isBefore(LocalDate.now())) {
+                DolarActualApiDTO actual = dolarApiClient.obtenerDolarActual();
+                if (actual != null && actual.promedio() != null && actual.promedio() > 0) {
+                    return actual.promedio();
+                }
+            }
+
+            List<DolarHistoricoApiDTO> historico = dolarApiClient.obtenerHistoricoDolares();
+            if (historico == null) {
+                return null;
+            }
+
+            String fechaIso = fecha.toString();
+            return historico.stream()
+                    .filter(dto -> fechaIso.equals(dto.fecha()))
+                    .map(DolarHistoricoApiDTO::promedio)
+                    .filter(promedio -> promedio != null && promedio > 0)
+                    .findFirst()
+                    .orElse(null);
+        } catch (Exception e) {
+            log.warn("No se pudo consultar la tasa externa para {}: {}", fecha, e.getMessage());
+            return null;
+        }
+    }
+
+    private Integer toFechaInt(LocalDate date) {
+        return date.getYear() * 10000 + date.getMonthValue() * 100 + date.getDayOfMonth();
     }
 }

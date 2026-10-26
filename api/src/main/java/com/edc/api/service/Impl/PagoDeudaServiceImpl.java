@@ -1,14 +1,18 @@
 package com.edc.api.service.Impl;
 
 import com.edc.api.dto.CategoriaResumenDTO;
+import com.edc.api.dto.CrearMovimientoAhorroDTO;
+import com.edc.api.dto.MovimientoAhorroDTO;
 import com.edc.api.dto.PagoDeudaDTO;
 import com.edc.api.dto.RegistrarPagoDeudaDTO;
+import com.edc.api.model.CuentaAhorro;
 import com.edc.api.model.Deuda;
 import com.edc.api.model.PagoDeuda;
-import com.edc.api.model.RegistroBot;
+import com.edc.api.repository.CuentaAhorroRepository;
 import com.edc.api.repository.DeudaRepository;
 import com.edc.api.repository.PagoDeudaRepository;
 import com.edc.api.repository.RegistroBotRepository;
+import com.edc.api.service.MovimientoAhorroService;
 import com.edc.api.service.PagoDeudaService;
 import com.edc.api.util.PeriodoDeudaUtil;
 import com.edc.api.util.PeriodoDeudaUtil.Periodo;
@@ -27,6 +31,8 @@ public class PagoDeudaServiceImpl implements PagoDeudaService {
     private final PagoDeudaRepository pagoDeudaRepository;
     private final DeudaRepository deudaRepository;
     private final RegistroBotRepository registroBotRepository;
+    private final CuentaAhorroRepository cuentaAhorroRepository;
+    private final MovimientoAhorroService movimientoAhorroService;
 
     @Override
     @Transactional
@@ -50,8 +56,14 @@ public class PagoDeudaServiceImpl implements PagoDeudaService {
         validarPeriodoDisponible(deuda, dto.fechaPago());
 
         String origen = dto.origen() != null ? dto.origen().toUpperCase() : "MANUAL";
+        Long movimientoAhorroId = null;
+
+        if ("BILLETERA".equals(origen)) {
+            movimientoAhorroId = debitarBilletera(deuda, dto);
+        }
+
         PagoDeuda pago = construirPago(deuda, dto.fechaPago(), dto.montoPagadoBs(), dto.montoPagadoUsd(),
-                dto.registroBotId(), dto.movimientoId(), origen);
+                dto.registroBotId(), dto.movimientoId(), origen, movimientoAhorroId);
 
         PagoDeuda guardado = pagoDeudaRepository.save(pago);
         desactivarDeudaSiUnaVez(deuda);
@@ -62,7 +74,13 @@ public class PagoDeudaServiceImpl implements PagoDeudaService {
     @Override
     @Transactional
     public void eliminarPago(Long id) {
-        pagoDeudaRepository.deleteById(id);
+        PagoDeuda pago = pagoDeudaRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Pago de deuda no encontrado"));
+        Long movimientoAhorroId = pago.getMovimientoAhorroId();
+        pagoDeudaRepository.delete(pago);
+        if (movimientoAhorroId != null) {
+            movimientoAhorroService.eliminar(movimientoAhorroId);
+        }
     }
 
     @Override
@@ -101,7 +119,7 @@ public class PagoDeudaServiceImpl implements PagoDeudaService {
             return Optional.empty();
         }
 
-        PagoDeuda pago = construirPago(deuda, fecha, montoBs, montoUsd, registroBotId, movimientoId, "AUTO");
+        PagoDeuda pago = construirPago(deuda, fecha, montoBs, montoUsd, registroBotId, movimientoId, "AUTO", null);
         PagoDeuda guardado = pagoDeudaRepository.save(pago);
         desactivarDeudaSiUnaVez(deuda);
 
@@ -147,6 +165,45 @@ public class PagoDeudaServiceImpl implements PagoDeudaService {
         }
     }
 
+    private Long debitarBilletera(Deuda deuda, RegistrarPagoDeudaDTO dto) {
+        if (dto.cuentaAhorroId() == null) {
+            throw new IllegalArgumentException("Debe indicar la billetera a debitar");
+        }
+
+        CuentaAhorro cuenta = cuentaAhorroRepository.findById(dto.cuentaAhorroId())
+                .orElseThrow(() -> new IllegalArgumentException("Billetera no encontrada"));
+
+        double montoDebitar = resolverMontoBilletera(cuenta.getTipoMoneda(), dto);
+        Long categoriaId = deuda.getCategoria() != null ? deuda.getCategoria().getId() : null;
+        String descripcion = "Pago de deuda: " + deuda.getNombre();
+
+        MovimientoAhorroDTO movimiento = movimientoAhorroService.registrar(new CrearMovimientoAhorroDTO(
+                cuenta.getId(),
+                "EGRESO",
+                montoDebitar,
+                descripcion,
+                dto.fechaPago(),
+                categoriaId,
+                deuda.getId()
+        ));
+        return movimiento.id();
+    }
+
+    private double resolverMontoBilletera(String tipoMoneda, RegistrarPagoDeudaDTO dto) {
+        boolean esUsd = tipoMoneda != null && (
+                tipoMoneda.equalsIgnoreCase("USD") || tipoMoneda.equalsIgnoreCase("USDT"));
+        if (esUsd) {
+            if (dto.montoPagadoUsd() == null || dto.montoPagadoUsd() <= 0) {
+                throw new IllegalArgumentException("El monto en USD es obligatorio para debitar esta billetera");
+            }
+            return dto.montoPagadoUsd();
+        }
+        if (dto.montoPagadoBs() == null || dto.montoPagadoBs() <= 0) {
+            throw new IllegalArgumentException("El monto en Bs es obligatorio para debitar esta billetera");
+        }
+        return dto.montoPagadoBs();
+    }
+
     private PagoDeuda construirPago(
             Deuda deuda,
             java.time.LocalDate fecha,
@@ -154,7 +211,8 @@ public class PagoDeudaServiceImpl implements PagoDeudaService {
             Double montoUsd,
             Long registroBotId,
             Long movimientoId,
-            String origen
+            String origen,
+            Long movimientoAhorroId
     ) {
         PagoDeuda pago = new PagoDeuda();
         pago.setDeuda(deuda);
@@ -164,6 +222,7 @@ public class PagoDeudaServiceImpl implements PagoDeudaService {
         pago.setRegistroBotId(registroBotId);
         pago.setMovimientoId(movimientoId);
         pago.setOrigen(origen);
+        pago.setMovimientoAhorroId(movimientoAhorroId);
         return pago;
     }
 

@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -16,6 +18,10 @@ public interface RegistroBotRepository extends JpaRepository<RegistroBot, Long> 
     List<RegistroBot> findByProcesadoFalseOrderByFechaCreacionDesc();
 
     List<RegistroBot> findByProcesadoFalseAndCategoriaId(Long categoriaId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE RegistroBot r SET r.montoDolar = ROUND(r.monto / :precioTasa, 2) WHERE (r.montoDolar IS NULL OR r.montoDolar = 0) AND r.fecha <= :fechaTasa")
+    int actualizarMontosHuerfanos(@Param("precioTasa") BigDecimal precioTasa, @Param("fechaTasa") LocalDate fechaTasa);
 
     @Modifying
     @Query("""

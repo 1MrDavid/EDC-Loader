@@ -11,5 +11,7 @@ public interface MovimientoAhorroService {
 
     MovimientoAhorroDTO registrar(CrearMovimientoAhorroDTO dto);
 
+    MovimientoAhorroDTO actualizar(Long id, CrearMovimientoAhorroDTO dto);
+
     void eliminar(Long id);
 }

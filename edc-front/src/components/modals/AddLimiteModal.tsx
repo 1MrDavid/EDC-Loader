@@ -6,6 +6,16 @@ import {
   type CrearLimiteDTO,
   type LimiteCategoriaDTO,
 } from "../../types/finance";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/animate-ui/components/radix/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Props {
   isOpen: boolean;
@@ -16,6 +26,9 @@ interface Props {
   defaultMonth: number;
   defaultYear: number;
 }
+
+const SELECT_CLASS =
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2";
 
 export const AddLimiteModal = ({
   isOpen,
@@ -60,8 +73,6 @@ export const AddLimiteModal = ({
     }
   }, [isOpen, limite, defaultMonth, defaultYear]);
 
-  if (!isOpen) return null;
-
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
 
@@ -82,22 +93,20 @@ export const AddLimiteModal = ({
   const categoriasEgreso = categorias.filter((c) => c.tipo === "EGRESO");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-          <h3 className="font-bold text-lg text-slate-800">
-            {isEditMode ? "Editar Límite" : "Nuevo Límite de Presupuesto"}
-          </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <DialogHeader>
+            <DialogTitle>{isEditMode ? "Editar Límite" : "Nuevo Límite de Presupuesto"}</DialogTitle>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-bold text-slate-600 mb-1">Categoría</label>
+          <div className="space-y-2">
+            <Label htmlFor="limite-categoria">Categoría</Label>
             <select
+              id="limite-categoria"
               value={categoriaId}
               onChange={(e) => setCategoriaId(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg cursor-pointer"
+              className={SELECT_CLASS}
               required
             >
               <option value="">Seleccionar categoría...</option>
@@ -109,48 +118,49 @@ export const AddLimiteModal = ({
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-slate-600 mb-1">Límite mensual (USD)</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="limite-monto">Límite mensual (USD)</Label>
+            <Input
+              id="limite-monto"
               type="number"
               step="0.01"
               min="0.01"
               value={montoUsd}
               onChange={(e) => setMontoUsd(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
 
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
-            <label className="block text-sm font-bold text-slate-600">Alcance del límite</label>
-            <label className="flex items-center gap-2 cursor-pointer">
+          <div className="space-y-3 rounded-xl border border-border bg-muted p-4">
+            <Label>Alcance del límite</Label>
+            <label className="flex cursor-pointer items-center gap-2">
               <input
                 type="radio"
                 checked={esGlobal}
                 onChange={() => setEsGlobal(true)}
-                className="cursor-pointer"
+                className="border-input"
               />
-              <span className="text-sm text-slate-700">Global (todos los meses)</span>
+              <span className="text-sm text-foreground">Global (todos los meses)</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex cursor-pointer items-center gap-2">
               <input
                 type="radio"
                 checked={!esGlobal}
                 onChange={() => setEsGlobal(false)}
-                className="cursor-pointer"
+                className="border-input"
               />
-              <span className="text-sm text-slate-700">Solo un mes específico</span>
+              <span className="text-sm text-foreground">Solo un mes específico</span>
             </label>
 
             {!esGlobal && (
               <div className="grid grid-cols-2 gap-3 pt-1">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Mes</label>
+                <div className="space-y-2">
+                  <Label htmlFor="limite-mes" className="text-xs text-muted-foreground">Mes</Label>
                   <select
+                    id="limite-mes"
                     value={mes}
                     onChange={(e) => setMes(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm cursor-pointer"
+                    className={SELECT_CLASS}
                   >
                     {Array.from({ length: 12 }, (_, i) => (
                       <option key={i + 1} value={i + 1}>
@@ -159,15 +169,15 @@ export const AddLimiteModal = ({
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Año</label>
-                  <input
+                <div className="space-y-2">
+                  <Label htmlFor="limite-ano" className="text-xs text-muted-foreground">Año</Label>
+                  <Input
+                    id="limite-ano"
                     type="number"
                     min="2020"
                     max="2100"
                     value={ano}
                     onChange={(e) => setAno(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                   />
                 </div>
               </div>
@@ -175,49 +185,52 @@ export const AddLimiteModal = ({
           </div>
 
           {isEditMode && (
-            <div>
-              <label className="block text-sm font-bold text-slate-600 mb-2">Estado</label>
+            <div className="space-y-2">
+              <Label>Estado</Label>
               <div className="flex gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => setActiva(true)}
-                  className={`flex-1 py-2 rounded-lg text-sm font-bold border cursor-pointer ${
-                    activa ? "border-emerald-500 bg-emerald-50 text-emerald-600" : "border-slate-200 text-slate-400"
+                  className={`flex-1 ${
+                    activa
+                      ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                      : "text-muted-foreground"
                   }`}
                 >
                   Activo
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => setActiva(false)}
-                  className={`flex-1 py-2 rounded-lg text-sm font-bold border cursor-pointer ${
-                    !activa ? "border-rose-500 bg-rose-50 text-rose-600" : "border-slate-200 text-slate-400"
+                  className={`flex-1 ${
+                    !activa
+                      ? "border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                      : "text-muted-foreground"
                   }`}
                 >
                   Inactivo
-                </button>
+                </Button>
               </div>
             </div>
           )}
 
-          <div className="pt-2 flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-slate-300 text-slate-600 font-medium rounded-lg hover:bg-slate-50 cursor-pointer"
-            >
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1 sm:flex-1">
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="default"
               disabled={isLoading || categoriaId === "" || !montoUsd}
-              className="flex-1 px-4 py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
+              className="flex-1 sm:flex-1"
             >
               {isLoading ? "Guardando..." : isEditMode ? "Guardar cambios" : "Crear Límite"}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };

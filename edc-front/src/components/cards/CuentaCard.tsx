@@ -6,16 +6,9 @@ interface Props {
 
 export const CuentaCard = ({ cuenta }: Props) => {
   return (
-    <div
-      style={{
-        border: "1px solid #e5e7eb",
-        borderRadius: "8px",
-        padding: "1rem",
-        minWidth: "220px",
-      }}
-    >
+    <div className="rounded-xl border border-border bg-card p-4 min-w-[220px] text-card-foreground">
       <h4>{cuenta.cuenta}</h4>
-      <p>N° {cuenta.numero}</p>
+      <p className="text-muted-foreground text-sm">N° {cuenta.numero}</p>
     </div>
   );
 };

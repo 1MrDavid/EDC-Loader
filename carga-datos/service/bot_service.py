@@ -1,4 +1,8 @@
+import logging
 import re
+from datetime import date
+
+import requests
 from schema.schemas import RegistroBot
 
 # Diccionario maestro de bancos en Venezuela
@@ -114,6 +118,8 @@ def _calcular_periodo(frecuencia: str, fecha):
         inicio = fecha - timedelta(days=fecha.weekday())
         fin = inicio + timedelta(days=6)
         return inicio, fin
+    if frecuencia == "QUINCENAL":
+        return fecha, fecha + timedelta(days=13)
     return fecha, fecha
 
 
@@ -191,6 +197,48 @@ def aplicar_reglas_a_registro(cursor, registro_id: int):
         )
 
 
+def _consultar_tasa_externa(fecha):
+    try:
+        if fecha >= date.today():
+            respuesta = requests.get("https://ve.dolarapi.com/v1/dolares/oficial", timeout=10)
+            respuesta.raise_for_status()
+            promedio = respuesta.json().get("promedio")
+            if promedio:
+                return float(promedio)
+
+        respuesta = requests.get("https://ve.dolarapi.com/v1/historicos/dolares/oficial", timeout=15)
+        respuesta.raise_for_status()
+        fecha_iso = fecha.isoformat()
+        for item in respuesta.json():
+            if item.get("fecha") == fecha_iso and item.get("promedio"):
+                return float(item["promedio"])
+    except Exception as e:
+        logging.warning("No se pudo consultar la tasa externa para %s: %s", fecha, e)
+    return None
+
+
+def _resolver_tasa_dolar(cursor, fecha):
+    fecha_int = int(fecha.strftime("%Y%m%d"))
+    cursor.execute("SELECT precio FROM valor_dolar WHERE fecha = %s", (fecha_int,))
+    row = cursor.fetchone()
+    if row and row[0] is not None:
+        return float(row[0])
+
+    tasa_externa = _consultar_tasa_externa(fecha)
+    if tasa_externa is None or tasa_externa <= 0:
+        return None
+
+    cursor.execute(
+        """
+        INSERT INTO valor_dolar (fecha, dia, mes, ano, precio)
+        VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (fecha) DO NOTHING
+        """,
+        (fecha_int, fecha.day, fecha.month, fecha.year, tasa_externa),
+    )
+    return tasa_externa
+
+
 def procesar_y_guardar_registro(registro: RegistroBot, conn):
     cursor = conn.cursor()
     try:
@@ -200,16 +248,8 @@ def procesar_y_guardar_registro(registro: RegistroBot, conn):
         telefono_std = estandarizar_telefono(registro.telefono)
         ident_std = estandarizar_identificacion(registro.identificacion)
 
-        # 2. Buscar la tasa del dólar para la fecha del movimiento
-        # Pydantic entrega registro.fecha como un objeto datetime.date
-        fecha_int = int(registro.fecha.strftime('%Y%m%d'))
-        
-        cursor.execute("SELECT precio FROM valor_dolar WHERE fecha = %s", (fecha_int,))
-        row = cursor.fetchone()
-        
-        tasa_dia = float(row[0]) if row and row[0] is not None else None
-        
-        # 3. Calcular el monto en dólares (si existe la tasa)
+        # 2. Buscar la tasa del dólar (local, luego API externa). Si ambas fallan, monto_dolar queda NULL.
+        tasa_dia = _resolver_tasa_dolar(cursor, registro.fecha)
         monto_usd = round(registro.monto / tasa_dia, 2) if tasa_dia and tasa_dia > 0 else None
 
         # 4. Guardar en Base de Datos incluyendo monto_dolar

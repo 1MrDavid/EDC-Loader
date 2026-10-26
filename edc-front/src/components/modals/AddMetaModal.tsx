@@ -6,6 +6,16 @@ import {
   type CrearMetaDTO,
   type MetaAhorroDTO,
 } from "../../types/finance";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/animate-ui/components/radix/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Props {
   isOpen: boolean;
@@ -14,6 +24,9 @@ interface Props {
   isLoading: boolean;
   meta?: MetaAhorroDTO | null;
 }
+
+const SELECT_CLASS =
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2";
 
 const DEFAULT_FORM = {
   nombre: "",
@@ -56,8 +69,6 @@ export const AddMetaModal = ({ isOpen, onClose, onSubmit, isLoading, meta }: Pro
     }
   }, [isOpen, meta, cuentas]);
 
-  if (!isOpen) return null;
-
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const base = {
@@ -75,34 +86,32 @@ export const AddMetaModal = ({ isOpen, onClose, onSubmit, isLoading, meta }: Pro
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-          <h3 className="font-bold text-lg text-slate-800">
-            {isEditMode ? "Editar Meta de Ahorro" : "Nueva Meta de Ahorro"}
-          </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <DialogHeader>
+            <DialogTitle>{isEditMode ? "Editar Meta de Ahorro" : "Nueva Meta de Ahorro"}</DialogTitle>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-bold text-slate-600 mb-1">Nombre</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="meta-nombre">Nombre</Label>
+            <Input
+              id="meta-nombre"
               type="text"
               placeholder="Ej. Fondo de emergencia, Viaje..."
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-slate-600 mb-1">Cuenta vinculada</label>
+          <div className="space-y-2">
+            <Label htmlFor="meta-cuenta">Cuenta vinculada</Label>
             <select
+              id="meta-cuenta"
               value={cuentaAhorroId}
               onChange={(e) => setCuentaAhorroId(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg cursor-pointer"
+              className={SELECT_CLASS}
               required
             >
               <option value="">Seleccionar cuenta...</option>
@@ -113,77 +122,80 @@ export const AddMetaModal = ({ isOpen, onClose, onSubmit, isLoading, meta }: Pro
               ))}
             </select>
             {cuentas.length === 0 && (
-              <p className="text-xs text-amber-600 mt-1">Crea una billetera primero en la sección Billeteras.</p>
+              <p className="text-xs text-amber-600 dark:text-amber-400">Crea una billetera primero en la sección Billeteras.</p>
             )}
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-slate-600 mb-1">Monto objetivo (USD)</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="meta-monto">Monto objetivo (USD)</Label>
+            <Input
+              id="meta-monto"
               type="number"
               step="0.01"
               min="0.01"
               value={montoObjetivoUsd}
               onChange={(e) => setMontoObjetivoUsd(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-slate-600 mb-1">Fecha límite (opcional)</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="meta-fecha">Fecha límite (opcional)</Label>
+            <Input
+              id="meta-fecha"
               type="date"
               value={fechaLimite}
               onChange={(e) => setFechaLimite(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg cursor-pointer"
             />
           </div>
 
           {isEditMode && (
-            <div>
-              <label className="block text-sm font-bold text-slate-600 mb-2">Estado</label>
+            <div className="space-y-2">
+              <Label>Estado</Label>
               <div className="flex gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => setActiva(true)}
-                  className={`flex-1 py-2 rounded-lg text-sm font-bold border cursor-pointer ${
-                    activa ? "border-emerald-500 bg-emerald-50 text-emerald-600" : "border-slate-200 text-slate-400"
+                  className={`flex-1 ${
+                    activa
+                      ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                      : "text-muted-foreground"
                   }`}
                 >
                   Activa
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => setActiva(false)}
-                  className={`flex-1 py-2 rounded-lg text-sm font-bold border cursor-pointer ${
-                    !activa ? "border-rose-500 bg-rose-50 text-rose-600" : "border-slate-200 text-slate-400"
+                  className={`flex-1 ${
+                    !activa
+                      ? "border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                      : "text-muted-foreground"
                   }`}
                 >
                   Inactiva
-                </button>
+                </Button>
               </div>
             </div>
           )}
 
-          <div className="pt-2 flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-slate-300 text-slate-600 font-medium rounded-lg hover:bg-slate-50 cursor-pointer"
-            >
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1 sm:flex-1">
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="default"
               disabled={isLoading || !nombre || cuentaAhorroId === "" || !montoObjetivoUsd}
-              className="flex-1 px-4 py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
+              className="flex-1 sm:flex-1"
             >
               {isLoading ? "Guardando..." : isEditMode ? "Guardar cambios" : "Crear Meta"}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };

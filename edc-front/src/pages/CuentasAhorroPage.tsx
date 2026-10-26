@@ -7,15 +7,35 @@ import {
   actualizarCuentaAhorro,
   eliminarCuentaAhorro,
   registrarMovimientoAhorro,
+  actualizarMovimientoAhorro,
   eliminarMovimientoAhorro,
 } from "../services/bankingService";
 import {
   type ActualizarCuentaAhorroDTO,
   type CrearCuentaAhorroDTO,
+  type CrearMovimientoAhorroDTO,
   type CuentaAhorroDTO,
+  type MovimientoAhorroDTO,
 } from "../types/finance";
 import { AddCuentaAhorroModal } from "../components/modals/AddCuentaAhorroModal";
 import { AddMovimientoAhorroModal } from "../components/modals/AddMovimientoAhorroModal";
+import { CategoryBadge } from "../components/cards/CategoryBadge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const CuentasAhorroPage = () => {
   const queryClient = useQueryClient();
@@ -23,6 +43,7 @@ export const CuentasAhorroPage = () => {
   const [isCuentaModalOpen, setIsCuentaModalOpen] = useState(false);
   const [isMovimientoModalOpen, setIsMovimientoModalOpen] = useState(false);
   const [cuentaEditando, setCuentaEditando] = useState<CuentaAhorroDTO | null>(null);
+  const [movimientoEditando, setMovimientoEditando] = useState<MovimientoAhorroDTO | null>(null);
 
   const { data: cuentas = [], isLoading: loadingCuentas } = useQuery({
     queryKey: ["cuentas-ahorro"],
@@ -44,6 +65,21 @@ export const CuentasAhorroPage = () => {
   const closeCuentaModal = () => {
     setIsCuentaModalOpen(false);
     setCuentaEditando(null);
+  };
+
+  const closeMovimientoModal = () => {
+    setIsMovimientoModalOpen(false);
+    setMovimientoEditando(null);
+  };
+
+  const openCreateMovimiento = () => {
+    setMovimientoEditando(null);
+    setIsMovimientoModalOpen(true);
+  };
+
+  const openEditMovimiento = (mov: MovimientoAhorroDTO) => {
+    setMovimientoEditando(mov);
+    setIsMovimientoModalOpen(true);
   };
 
   const crearCuentaMutation = useMutation({
@@ -79,28 +115,52 @@ export const CuentasAhorroPage = () => {
     },
   });
 
+  const invalidarMovimientos = () => {
+    queryClient.invalidateQueries({ queryKey: ["movimientos-ahorro"] });
+    queryClient.invalidateQueries({ queryKey: ["cuentas-ahorro"] });
+    queryClient.invalidateQueries({ queryKey: ["metas-ahorro"] });
+    queryClient.invalidateQueries({ queryKey: ["deudas"] });
+    queryClient.invalidateQueries({ queryKey: ["pagos-deuda"] });
+  };
+
   const registrarMovimientoMutation = useMutation({
     mutationFn: registrarMovimientoAhorro,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["movimientos-ahorro"] });
-      queryClient.invalidateQueries({ queryKey: ["cuentas-ahorro"] });
-      queryClient.invalidateQueries({ queryKey: ["metas-ahorro"] });
-      setIsMovimientoModalOpen(false);
+      invalidarMovimientos();
+      closeMovimientoModal();
     },
     onError: (error: Error) => {
       alert(error.message || "Error al registrar el movimiento.");
     },
   });
 
+  const actualizarMovimientoMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: CrearMovimientoAhorroDTO }) =>
+      actualizarMovimientoAhorro(id, data),
+    onSuccess: () => {
+      invalidarMovimientos();
+      closeMovimientoModal();
+    },
+    onError: (error: Error) => {
+      alert(error.message || "Error al actualizar el movimiento.");
+    },
+  });
+
   const eliminarMovimientoMutation = useMutation({
     mutationFn: eliminarMovimientoAhorro,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["movimientos-ahorro"] });
-      queryClient.invalidateQueries({ queryKey: ["cuentas-ahorro"] });
-      queryClient.invalidateQueries({ queryKey: ["metas-ahorro"] });
+      invalidarMovimientos();
     },
     onError: () => alert("Error al eliminar el movimiento."),
   });
+
+  const handleSubmitMovimiento = (data: CrearMovimientoAhorroDTO) => {
+    if (movimientoEditando) {
+      actualizarMovimientoMutation.mutate({ id: movimientoEditando.id, data });
+    } else {
+      registrarMovimientoMutation.mutate(data);
+    }
+  };
 
   const handleSubmitCuenta = (data: CrearCuentaAhorroDTO | ActualizarCuentaAhorroDTO) => {
     if (cuentaEditando) {
@@ -115,91 +175,97 @@ export const CuentasAhorroPage = () => {
   const isSavingCuenta = crearCuentaMutation.isPending || actualizarCuentaMutation.isPending;
 
   return (
-    <div className="bg-slate-50 min-h-screen p-8 -m-8 flex flex-col gap-8">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Ahorros y Billeteras</h1>
-          <p className="text-slate-500 text-sm">Gestión de liquidez, divisas y cuentas de ahorro.</p>
+    <div className="mx-auto max-w-7xl space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Ahorros y Billeteras</h1>
+          <p className="text-sm text-muted-foreground">Gestión de liquidez, divisas y cuentas de ahorro.</p>
         </div>
-        <button
+        <Button
+          type="button"
           onClick={() => {
             setCuentaEditando(null);
             setIsCuentaModalOpen(true);
           }}
-          className="px-4 py-2 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-slate-800 transition-colors shadow-sm cursor-pointer"
         >
           + Nueva Billetera
-        </button>
+        </Button>
       </div>
 
-      <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col lg:flex-row gap-8 items-center">
-        <div className="w-full lg:w-1/3 space-y-2">
-          <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Patrimonio Líquido Total</h3>
-          <p className="text-4xl font-bold text-slate-800">
-            ${capitalTotalUsd.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-          </p>
-          <p className="text-sm text-emerald-600 font-medium flex items-center gap-1">
-            <span>↑</span> Distribuido en {cuentas.length} cuentas
-          </p>
-        </div>
+      <Card>
+        <CardContent className="flex flex-col gap-8 p-6 md:flex-row md:items-center">
+          <div className="w-full space-y-2 md:w-1/3">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Patrimonio Líquido Total</h3>
+            <p className="text-4xl font-bold text-foreground">
+              ${capitalTotalUsd.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </p>
+            <p className="flex items-center gap-1 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+              <span>↑</span> Distribuido en {cuentas.length} cuentas
+            </p>
+          </div>
 
-        <div className="w-full lg:w-2/3 flex flex-col gap-3 border-l border-slate-100 pl-8">
-          <h4 className="text-xs font-bold text-slate-500 uppercase">Distribución de Capital</h4>
-          {cuentas.map((cuenta) => {
-            const porcentaje = capitalTotalUsd > 0 ? (cuenta.saldoEquivalenteUsd / capitalTotalUsd) * 100 : 0;
-            return (
-              <div key={`chart-${cuenta.id}`} className="flex items-center gap-3">
-                <span className="w-24 text-xs font-semibold text-slate-600 truncate">{cuenta.nombre}</span>
-                <div className="flex-1 bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-1000"
-                    style={{ width: `${porcentaje}%`, backgroundColor: cuenta.color }}
-                  />
+          <div className="flex w-full flex-col gap-3 border-t border-border pt-6 md:w-2/3 md:border-t-0 md:border-l md:pt-0 md:pl-8">
+            <h4 className="text-xs font-bold uppercase text-muted-foreground">Distribución de Capital</h4>
+            {cuentas.map((cuenta, index) => {
+              const porcentaje = capitalTotalUsd > 0 ? (cuenta.saldoEquivalenteUsd / capitalTotalUsd) * 100 : 0;
+              const fallbackBar = index % 2 === 0 ? "bg-emerald-500" : "bg-orange-500";
+              return (
+                <div key={`chart-${cuenta.id}`} className="flex items-center gap-3">
+                  <span className="w-24 truncate text-xs font-semibold text-foreground">{cuenta.nombre}</span>
+                  <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={`h-full rounded-full transition-all duration-1000 ${cuenta.color ? "" : fallbackBar}`}
+                      style={{ width: `${porcentaje}%`, backgroundColor: cuenta.color || undefined }}
+                    />
+                  </div>
+                  <span className="w-12 text-right text-xs font-bold text-muted-foreground">{porcentaje.toFixed(0)}%</span>
                 </div>
-                <span className="w-12 text-right text-xs font-bold text-slate-400">{porcentaje.toFixed(0)}%</span>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       <section>
-        <div className="flex justify-between items-center mb-4 px-1">
-          <h3 className="text-lg font-bold text-slate-800">Tus Cuentas</h3>
+        <div className="mb-4 flex flex-col gap-3 px-1 sm:flex-row sm:items-center sm:justify-between">
+          <h3 className="text-lg font-bold text-foreground">Tus Cuentas</h3>
           {cuentaActiva && (
             <div className="flex gap-2">
-              <button
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   setCuentaEditando(cuentaActiva);
                   setIsCuentaModalOpen(true);
                 }}
-                className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer"
               >
                 Editar
-              </button>
-              <button
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-rose-600 dark:text-rose-400"
                 onClick={() => {
                   if (confirm(`¿Eliminar la billetera "${cuentaActiva.nombre}"?`)) {
                     eliminarCuentaMutation.mutate(cuentaActiva.id);
                   }
                 }}
-                className="px-3 py-1.5 text-xs font-bold text-rose-600 border border-rose-200 rounded-lg hover:bg-rose-50 cursor-pointer"
               >
                 Eliminar
-              </button>
+              </Button>
             </div>
           )}
         </div>
 
-        <div className="flex overflow-x-auto pb-4 gap-4 custom-scrollbar snap-x">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {loadingCuentas ? (
-            <div className="flex gap-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="min-w-[280px] h-32 bg-white border border-slate-200 rounded-2xl animate-pulse shrink-0" />
-              ))}
-            </div>
+            [1, 2, 3].map((i) => (
+              <div key={i} className="h-32 animate-pulse rounded-2xl border border-border bg-card" />
+            ))
           ) : cuentas.length === 0 ? (
-            <div className="p-8 text-slate-400 text-sm">No hay billeteras registradas. Crea la primera.</div>
+            <div className="text-sm text-muted-foreground">No hay billeteras registradas. Crea la primera.</div>
           ) : (
             cuentas.map((cuenta) => {
               const isSelected = cuentaSeleccionada === cuenta.id;
@@ -207,33 +273,35 @@ export const CuentasAhorroPage = () => {
                 <div
                   key={cuenta.id}
                   onClick={() => setCuentaSeleccionada(cuenta.id)}
-                  className={`min-w-[280px] shrink-0 snap-start p-5 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group
+                  className={`relative cursor-pointer overflow-hidden rounded-2xl border p-5 transition-all group
                     ${isSelected
-                      ? "bg-slate-900 border-slate-900 shadow-md text-white"
-                      : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm text-slate-800"
+                      ? "border-primary bg-card ring-1 ring-primary text-card-foreground"
+                      : "border-border bg-card text-card-foreground hover:border-primary/50"
                     }`}
                 >
-                  <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: cuenta.color }} />
+                  <div className="absolute top-0 left-0 h-full w-1" style={{ backgroundColor: cuenta.color }} />
 
-                  <div className="flex justify-between items-start mb-4 ml-2">
+                  <div className="mb-4 ml-2 flex items-start justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl bg-white/10 p-1.5 rounded-lg">{cuenta.icono}</span>
+                      <span className="rounded-lg bg-muted p-1.5 text-xl">{cuenta.icono}</span>
                       <div>
-                        <h4 className="font-bold text-sm leading-none">{cuenta.nombre}</h4>
-                        <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                        <h4 className="text-sm leading-none font-bold">{cuenta.nombre}</h4>
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                           Cuenta en {cuenta.tipoMoneda}
                         </span>
                       </div>
                     </div>
-                    {isSelected && <span className="text-xs bg-white/20 px-2 py-0.5 rounded text-white">Activa</span>}
+                    {isSelected && (
+                      <span className="rounded bg-primary/10 px-2 py-0.5 text-xs text-primary">Activa</span>
+                    )}
                   </div>
 
                   <div className="ml-2">
-                    <p className={`text-2xl font-bold ${isSelected ? "text-white" : "text-slate-800"}`}>
+                    <p className="text-2xl font-bold text-foreground">
                       {cuenta.tipoMoneda === "Bs" ? "Bs. " : "$"}
                       {cuenta.saldoActual.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </p>
-                    <p className={`text-xs mt-1 ${isSelected ? "text-slate-400" : "text-slate-500"}`}>
+                    <p className="mt-1 text-xs text-muted-foreground">
                       ≈ ${cuenta.saldoEquivalenteUsd.toLocaleString(undefined, { minimumFractionDigits: 2 })} USD
                     </p>
                   </div>
@@ -244,105 +312,230 @@ export const CuentasAhorroPage = () => {
         </div>
       </section>
 
-      <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex-1 flex flex-col min-h-[400px]">
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <div>
-            <h2 className="text-lg font-bold text-slate-800">Historial de Movimientos</h2>
-            <p className="text-xs text-slate-500">
+      <Card>
+        <CardHeader className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle>Historial de Movimientos</CardTitle>
+            <CardDescription>
               Mostrando actividad de:{" "}
-              <span className="font-bold text-slate-700">{cuentaActiva?.nombre || "Seleccione una cuenta"}</span>
-            </p>
+              <span className="font-semibold text-foreground">{cuentaActiva?.nombre || "Seleccione una cuenta"}</span>
+            </CardDescription>
           </div>
-          <button
-            onClick={() => setIsMovimientoModalOpen(true)}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={openCreateMovimiento}
             disabled={!cuentaSeleccionada}
-            className="px-3 py-1.5 border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 cursor-pointer"
           >
             + Registrar Movimiento
-          </button>
-        </div>
+          </Button>
+        </CardHeader>
 
-        <div className="flex-1 overflow-x-auto">
+        <CardContent className="p-0">
           {loadingMovimientos && cuentaSeleccionada ? (
-            <div className="p-8 text-center text-slate-400 animate-pulse">Cargando movimientos...</div>
+            <div className="p-8 text-center text-muted-foreground animate-pulse">Cargando movimientos...</div>
           ) : !cuentaSeleccionada ? (
-            <div className="p-12 text-center text-slate-400 flex flex-col items-center">
-              <span className="text-4xl mb-3">👆</span>
+            <div className="flex flex-col items-center p-12 text-center text-muted-foreground">
+              <span className="mb-3 text-4xl">👆</span>
               Selecciona una tarjeta arriba para ver sus movimientos
             </div>
           ) : (
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-white border-b border-slate-100 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-                <tr>
-                  <th className="px-6 py-4">Fecha</th>
-                  <th className="px-6 py-4">Concepto / Descripción</th>
-                  <th className="px-6 py-4">Operación</th>
-                  <th className="px-6 py-4 text-right">Monto</th>
-                  <th className="px-6 py-4 text-center">Acción</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
+            <>
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                      <TableHead className="px-6 text-xs uppercase">Fecha</TableHead>
+                      <TableHead className="px-6 text-xs uppercase">Concepto / Descripción</TableHead>
+                      <TableHead className="px-6 text-xs uppercase">Categoría</TableHead>
+                      <TableHead className="px-6 text-xs uppercase">Operación</TableHead>
+                      <TableHead className="px-6 text-right text-xs uppercase">Monto</TableHead>
+                      <TableHead className="px-6 text-center text-xs uppercase">Acción</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {movimientos.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                          No hay movimientos registrados en esta cuenta.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      movimientos.map((mov) => {
+                        const isIngreso = mov.tipoOperacion === "INGRESO";
+                        return (
+                          <TableRow key={mov.id}>
+                            <TableCell className="px-6 whitespace-nowrap">
+                              <span className="block text-sm font-semibold text-foreground">{mov.fecha}</span>
+                              <span className="mt-0.5 block font-mono text-[10px] text-muted-foreground">ID: {mov.id}</span>
+                            </TableCell>
+                            <TableCell className="max-w-md px-6">
+                              <span className="block truncate text-sm font-medium text-foreground">
+                                {mov.descripcion || "Sin descripción"}
+                              </span>
+                              {mov.registroBotId && (
+                                <span className="mt-1 inline-block rounded border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
+                                  Vinculado a Bot
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="px-6">
+                              <div className="flex flex-col items-start">
+                                {mov.categoriaNombre ? (
+                                  <CategoryBadge
+                                    categoria={{
+                                      nombre: mov.categoriaNombre,
+                                      icono: mov.categoriaIcono || "🏷️",
+                                      color: mov.categoriaColor || undefined,
+                                    }}
+                                  />
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">Sin categoría</span>
+                                )}
+                                {mov.deudaNombre && (
+                                  <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                    Pago: {mov.deudaNombre}
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-6 whitespace-nowrap">
+                              <span
+                                className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-bold ${
+                                  isIngreso
+                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                    : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                                }`}
+                              >
+                                {isIngreso ? "↓ Ingreso" : "↑ Egreso"}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-6 text-right whitespace-nowrap">
+                              <span className={`block text-sm font-bold ${isIngreso ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}>
+                                {isIngreso ? "+" : "-"}
+                                {mov.monto.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-6 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="xs"
+                                  className="text-primary"
+                                  onClick={() => openEditMovimiento(mov)}
+                                >
+                                  Editar
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="xs"
+                                  className="text-rose-600 dark:text-rose-400"
+                                  onClick={() => {
+                                    if (confirm("¿Eliminar este movimiento? Se revertirá el saldo.")) {
+                                      eliminarMovimientoMutation.mutate(mov.id);
+                                    }
+                                  }}
+                                >
+                                  Quitar
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="block divide-y divide-border md:hidden">
                 {movimientos.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-sm">
-                      No hay movimientos registrados en esta cuenta.
-                    </td>
-                  </tr>
+                  <div className="p-8 text-center text-sm text-muted-foreground">
+                    No hay movimientos registrados en esta cuenta.
+                  </div>
                 ) : (
                   movimientos.map((mov) => {
                     const isIngreso = mov.tipoOperacion === "INGRESO";
                     return (
-                      <tr key={mov.id} className="hover:bg-slate-50/80 transition-colors group">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="block text-sm font-semibold text-slate-700">{mov.fecha}</span>
-                          <span className="block text-[10px] text-slate-400 font-mono mt-0.5">ID: {mov.id}</span>
-                        </td>
-                        <td className="px-6 py-4 max-w-md">
-                          <span className="block text-sm text-slate-700 font-medium truncate">
+                      <div key={mov.id} className="flex items-start gap-3 p-4">
+                        <div className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold text-foreground">
                             {mov.descripcion || "Sin descripción"}
                           </span>
-                          {mov.registroBotId && (
-                            <span className="inline-block mt-1 text-[10px] bg-blue-50 text-blue-500 px-2 py-0.5 rounded border border-blue-100">
-                              Vinculado a Bot
+                          {mov.deudaNombre && (
+                            <span className="mt-0.5 block text-xs text-muted-foreground">
+                              Deuda: {mov.deudaNombre}
                             </span>
                           )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="mt-0.5 block text-xs text-muted-foreground">{mov.fecha}</span>
+                          <div className="mt-1 flex flex-col items-start">
+                            {mov.categoriaNombre ? (
+                              <CategoryBadge
+                                categoria={{
+                                  nombre: mov.categoriaNombre,
+                                  icono: mov.categoriaIcono || "🏷️",
+                                  color: mov.categoriaColor || undefined,
+                                }}
+                              />
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Sin categoría</span>
+                            )}
+                            {mov.deudaNombre && (
+                              <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                Pago: {mov.deudaNombre}
+                              </span>
+                            )}
+                          </div>
                           <span
-                            className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md ${
-                              isIngreso ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                            className={`mt-1 inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                              isIngreso
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
                             }`}
                           >
                             {isIngreso ? "↓ Ingreso" : "↑ Egreso"}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 text-right whitespace-nowrap">
-                          <span className={`block text-sm font-bold ${isIngreso ? "text-emerald-600" : "text-slate-800"}`}>
+                        </div>
+                        <div className="flex shrink-0 flex-col items-end gap-2">
+                          <span className={`text-sm font-bold ${isIngreso ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}>
                             {isIngreso ? "+" : "-"}
                             {mov.monto.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <button
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="xs"
+                            className="text-primary"
+                            onClick={() => openEditMovimiento(mov)}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="xs"
+                            className="text-rose-600 dark:text-rose-400"
                             onClick={() => {
                               if (confirm("¿Eliminar este movimiento? Se revertirá el saldo.")) {
                                 eliminarMovimientoMutation.mutate(mov.id);
                               }
                             }}
-                            className="text-xs text-rose-500 hover:text-rose-700 font-semibold cursor-pointer"
                           >
                             Quitar
-                          </button>
-                        </td>
-                      </tr>
+                          </Button>
+                        </div>
+                      </div>
                     );
                   })
                 )}
-              </tbody>
-            </table>
+              </div>
+            </>
           )}
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
       <AddCuentaAhorroModal
         isOpen={isCuentaModalOpen}
@@ -355,11 +548,12 @@ export const CuentasAhorroPage = () => {
       {cuentaActiva && (
         <AddMovimientoAhorroModal
           isOpen={isMovimientoModalOpen}
-          onClose={() => setIsMovimientoModalOpen(false)}
-          onSubmit={(data) => registrarMovimientoMutation.mutate(data)}
-          isLoading={registrarMovimientoMutation.isPending}
+          onClose={closeMovimientoModal}
+          onSubmit={handleSubmitMovimiento}
+          isLoading={registrarMovimientoMutation.isPending || actualizarMovimientoMutation.isPending}
           cuentaAhorroId={cuentaActiva.id}
           cuentaNombre={cuentaActiva.nombre}
+          movimientoEditando={movimientoEditando}
         />
       )}
     </div>

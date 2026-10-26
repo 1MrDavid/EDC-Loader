@@ -10,6 +10,16 @@ import { crearCuenta } from "../services/bankingService";
 import { type CrearCuentaDTO } from "../types/finance";
 import { AddAccountModal } from "../components/modals/AddAccountModal";
 import { AddAccountCard } from "../components/cards/AddAccountCard";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+
+const SELECT_CLASS =
+  "flex h-9 items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 export const HistorialDashboard = () => {
   const navigate = useNavigate();
@@ -48,105 +58,83 @@ export const HistorialDashboard = () => {
   const years = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
 
   return (
-    <div className="bg-slate-50 min-h-screen pb-10">
-      
-      <main className="max-w-7xl mx-auto p-8 space-y-8">
-        
-        {/* TITULO */}
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Visión General</h1>
-          <p className="text-slate-500 text-sm">Resumen consolidado de todas tus cuentas bancarias.</p>
+    <div className="mx-auto max-w-7xl space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Visión General</h1>
+        <p className="text-sm text-muted-foreground">Resumen consolidado de todas tus cuentas bancarias.</p>
+      </div>
+
+      <section>
+        <GlobalTrendChart data={historialGlobal} />
+      </section>
+
+      <section>
+        <h2 className="text-lg font-bold text-foreground mb-4">Tus Cuentas</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.isArray(cuentas) && cuentas.map(cuenta => (
+            <AccountCard 
+              key={cuenta.id} 
+              cuenta={cuenta} 
+              onClick={() => navigate(`/cuenta/${cuenta.id}`)}
+            />
+          ))}
+
+          <AddAccountCard onClick={() => setIsModalOpen(true)} />
         </div>
+      </section>
 
-        {/* SECCIÓN 1: GRÁFICO HISTÓRICO */}
-        <section>
-           <GlobalTrendChart data={historialGlobal} />
-        </section>
-
-        {/* SECCIÓN 2: TUS CUENTAS */}
-        <section>
-          <h2 className="text-lg font-bold text-slate-800 mb-4">Tus Cuentas</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            
-            {/* Lista de cuentas existentes */}
-            {Array.isArray(cuentas) && cuentas.map(cuenta => (
-              <AccountCard 
-                key={cuenta.id} 
-                cuenta={cuenta} 
-                onClick={() => navigate(`/cuenta/${cuenta.id}`)}
-              />
-            ))}
-
-            {/* Tarjeta para agregar nueva cuenta */}
-            <AddAccountCard onClick={() => setIsModalOpen(true)} />
-
-          </div>
-        </section>
-
-        {/* SECCIÓN 3: MOVIMIENTOS RECIENTES (CON FILTROS) */}
-        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          
-          {/* HEADER DE LA TABLA: Título + Filtros de Fecha */}
-          <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h2 className="text-lg font-bold text-slate-800">
-                Movimientos Recientes (Global)
-              </h2>
-              <p className="text-xs text-slate-400">
-                Mostrando actividad consolidada.
-              </p>
-            </div>
-
-            {/* --- SELECTORES DE FECHA --- */}
-            <div className="flex gap-2">
-              <select 
-                value={filters.month} 
-                onChange={(e) => {
-                   actions.setMonth(Number(e.target.value));
-                   actions.setPage(0); // Reset página al cambiar mes
-                }}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-slate-100"
-              >
-                {Array.from({length: 12}, (_, i) => (
-                  <option key={i+1} value={i+1}>
-                    {new Date(0, i).toLocaleString('es', {month: 'long'})}
-                  </option>
-                ))}
-              </select>
-
-              <select 
-                value={filters.year} 
-                onChange={(e) => {
-                  actions.setYear(Number(e.target.value));
-                  actions.setPage(0);
-                }}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-slate-100"
-              >
-                {years.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-            </div>
-            {/* --------------------------- */}
-
+      <Card>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <CardTitle>Movimientos Recientes (Global)</CardTitle>
+            <CardDescription>Mostrando actividad consolidada.</CardDescription>
           </div>
 
+          <div className="flex gap-2">
+            <select 
+              value={filters.month} 
+              onChange={(e) => {
+                 actions.setMonth(Number(e.target.value));
+                 actions.setPage(0); // Reset página al cambiar mes
+              }}
+              className={SELECT_CLASS}
+            >
+              {Array.from({length: 12}, (_, i) => (
+                <option key={i+1} value={i+1}>
+                  {new Date(0, i).toLocaleString('es', {month: 'long'})}
+                </option>
+              ))}
+            </select>
+
+            <select 
+              value={filters.year} 
+              onChange={(e) => {
+                actions.setYear(Number(e.target.value));
+                actions.setPage(0);
+              }}
+              className={SELECT_CLASS}
+            >
+              {years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-0">
           <MovimientosTable 
             data={movimientosData?.content || []} 
             currentPage={filters.page}
             totalPages={movimientosData?.totalPages || 1}
             onPageChange={actions.setPage}
           />
-        </section>
+        </CardContent>
+      </Card>
 
-      </main>
-
-      {/* --- EL MODAL OCULTO HASTA QUE SE LE LLAME --- */}
       <AddAccountModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleCrearCuenta}
         isLoading={crearCuentaMutation.isPending}
       />
-
     </div>
   );
 };
